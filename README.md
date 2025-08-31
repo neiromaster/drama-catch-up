@@ -35,11 +35,11 @@ The script periodically checks the series pages specified in `config.yaml`. If i
     series:
       - name: "Series Name"
         url: "https://filecrypt.cc/Container/YOUR_CONTAINER_ID.html"
-        last: 0 # The number of the last downloaded episode
+        series: 0 # The number of the last downloaded episode
       
       - name: "Another Series"
         url: "https://filecrypt.cc/Container/ANOTHER_ID.html"
-        last: 15
+        series: 15
     ```
 
 ## Usage

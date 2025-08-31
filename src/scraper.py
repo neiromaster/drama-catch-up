@@ -7,7 +7,7 @@ def parse_series_links(html_content, series_info):
     """Finds links to new episodes for a series."""
     soup = BeautifulSoup(html_content, "html.parser")
     found_links = []
-    last_downloaded = series_info.get("last", 0)
+    last_downloaded = series_info.get("series", 0)
 
     for row in soup.find_all("tr", class_="kwj3"):
         if not row.find(

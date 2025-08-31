@@ -35,11 +35,11 @@
     series:
       - name: "Название сериала"
         url: "https://filecrypt.cc/Container/КОНТЕЙНЕР.html"
-        last: 0 # Номер последней скачанной серии
+        series: 0 # Номер последней скачанной серии
       
       - name: "Другой сериал"
         url: "https://filecrypt.cc/Container/ДРУГОЙ_КОНТЕЙНЕР.html"
-        last: 15
+        series: 15
     ```
 
 ## Запуск
