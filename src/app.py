@@ -78,7 +78,7 @@ def run_check():
                             None,
                         )
                         if original_series_index is not None:
-                            current_config["series"][original_series_index]["last"] = (
+                            current_config["series"][original_series_index]["series"] = (
                                 episode_data["episode"]
                             )
                             save_config(current_config)

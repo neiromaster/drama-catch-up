@@ -21,8 +21,8 @@ settings:
 series:
   - name: "Name of the Series"
     url: "https://filecrypt.cc/Container/YOUR_CONTAINER_ID.html"
-    last: 0 # The number of the last episode you have downloaded.
+    series: 0 # The number of the last episode you have downloaded.
   
   - name: "Another Series"
     url: "https://filecrypt.cc/Container/ANOTHER_ID.html"
-    last: 5 # Starts checking for episodes 6 and newer.
+    series: 5 # Starts checking for episodes 6 and newer.
