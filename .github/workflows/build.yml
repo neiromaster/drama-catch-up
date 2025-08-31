@@ -34,6 +34,9 @@ jobs:
         run: uv run ruff format --check .
 
   build:
+    defaults:
+      run:
+        shell: bash
     needs: lint
     name: Build for ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
