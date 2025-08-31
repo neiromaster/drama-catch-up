@@ -3,6 +3,9 @@
 
 # Global settings for the script
 settings:
+  # Interval between checks in minutes
+  check_interval_minutes: 10
+
   # The root directory where series should be downloaded
   download_directory: "downloads"
   

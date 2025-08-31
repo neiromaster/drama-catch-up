@@ -1,6 +1,6 @@
 # Drama Monitor
 
-A script to automatically track and download new episodes of TV series.
+A script to automatically track and download new episodes of TV series. It runs in a continuous loop, checking for updates at a configurable interval.
 
 ## How It Works
 
@@ -50,4 +50,6 @@ To run the script, execute the command:
 uv run python main.py
 ```
 
-The script will start checking all series from the config. New episodes will be downloaded to the `downloads` folder, with a separate subfolder created for each series. After each successful download, the `config.yaml` file will be updated automatically.
+The script will start and run continuously, performing checks at the interval specified in `config.yaml`. New episodes will be downloaded to the `downloads` folder, with a separate subfolder created for each series. After each successful download, the `config.yaml` file will be updated automatically.
+
+To stop the script, press `Ctrl+C` in the terminal.
