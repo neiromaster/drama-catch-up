@@ -52,7 +52,7 @@ def main():
                         print(f"    ⚠️ Конечный URL не ведет на gofile.io: {final_url}")
                         continue
                     
-                    print(f"    ➡️ Финальная ссылка: {final_url}")
+                    print(f"    ➡️  Финальная ссылка: {final_url}")
                     download_params = {
                         "url": final_url,
                         "series_name": series['name'],

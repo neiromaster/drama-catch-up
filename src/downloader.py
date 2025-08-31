@@ -2,7 +2,7 @@ import os
 import subprocess
 
 def download_with_yt_dlp(url, series_name, season, episode, output_dir, yt_dlp_args=None):
-    """Runs yt-dlp to download a video, showing progress in real-time."""
+    """Runs yt-dlp to download a video, showing only the progress bar."""
     if yt_dlp_args is None:
         yt_dlp_args = []
 
@@ -15,15 +15,17 @@ def download_with_yt_dlp(url, series_name, season, episode, output_dir, yt_dlp_a
     try:
         command = [
             "uv", "run", "--", "yt-dlp",
-            "--output", output_template
+            "--output", output_template,
+            "--quiet",
+            "--progress",
         ] + yt_dlp_args + [url]
 
         subprocess.run(command, check=True)
         
-        print(f"  ✅ [yt-dlp] Скачивание серии {episode} успешно завершено.")
+        print(f"\n  ✅ [yt-dlp] Скачивание серии {episode} успешно завершено.")
         return True
     except subprocess.CalledProcessError:
-        print(f"  ❌ [yt-dlp] Ошибка при скачивании серии {episode}.")
+        print(f"\n  ❌ [yt-dlp] Ошибка при скачивании серии {episode}.")
         return False
     except KeyboardInterrupt:
         print("\n  🛑 Скачивание прервано пользователем.")
