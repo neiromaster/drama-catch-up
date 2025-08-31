@@ -4,7 +4,11 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "requests",
+    "pyyaml",
+    "beautifulsoup4",
+]
 
 [project.optional-dependencies]
 build = ["pyinstaller", "ruff"]
@@ -14,5 +18,11 @@ line-length = 88
 
 [tool.ruff.format]
 quote-style = "double"
+
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.15.0",
+    "ruff>=0.12.11",
+]
 
 
