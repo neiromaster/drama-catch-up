@@ -31,7 +31,7 @@ jobs:
         shell: bash
 
       - name: Check formatting
-        run: ruff format --check .
+        run: uv run ruff format --check .
 
   build:
     needs: lint
