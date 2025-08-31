@@ -63,7 +63,6 @@ def main():
                     }
 
                     if download_with_yt_dlp(**download_params):
-                        # Find the correct index in the original config_data
                         original_series_index = next((idx for idx, s in enumerate(config_data['series']) if s['name'] == series['name']), None)
                         if original_series_index is not None:
                             config_data['series'][original_series_index]['last'] = episode_data['episode']

@@ -1,0 +1,44 @@
+name: Build Executables
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-14] # macos-14 is Apple Silicon (arm64)
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install uv
+      run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      shell: bash
+
+    - name: Add uv to PATH
+      run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+      shell: bash
+
+    - name: Install dependencies
+      run: uv sync --all-extras
+      shell: bash
+
+    - name: Build with PyInstaller
+      run: pyinstaller main.py --onefile --name drama-monitor-${{ matrix.os }}
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: drama-monitor-${{ matrix.os }}
+        path: dist/*
