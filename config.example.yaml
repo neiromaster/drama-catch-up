@@ -1,10 +1,25 @@
 # This is an example configuration file.
 # Copy this file to config.yaml and fill in your actual data.
 
-- name: "Name of the Series"
-  url: "https://filecrypt.cc/Container/YOUR_CONTAINER_ID.html"
-  last: 0 # The number of the last episode you have downloaded.
+# Global settings for the script
+settings:
+  # The root directory where series should be downloaded
+  download_directory: "downloads"
+  
+  # Custom arguments for yt-dlp
+  # Example for multi-threaded downloading:
+  yt-dlp_args:
+    - "--concurrent-fragments"
+    - "4"
+    # - "--limit-rate"
+    # - "10M"
 
-- name: "Another Series"
-  url: "https://filecrypt.cc/Container/ANOTHER_ID.html"
-  last: 5 # Starts checking for episodes 6 and newer.
+# List of series to track
+series:
+  - name: "Name of the Series"
+    url: "https://filecrypt.cc/Container/YOUR_CONTAINER_ID.html"
+    last: 0 # The number of the last episode you have downloaded.
+  
+  - name: "Another Series"
+    url: "https://filecrypt.cc/Container/ANOTHER_ID.html"
+    last: 5 # Starts checking for episodes 6 and newer.

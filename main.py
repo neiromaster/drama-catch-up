@@ -5,12 +5,22 @@ from src.downloader import download_with_yt_dlp
 
 def main():
     """The main function of the script."""
-    config = load_config()
-    if not config:
+    config_data = load_config()
+    if not config_data:
         print("❌ Файл config.yaml не найден. Выход.")
         return
 
-    for i, series in enumerate(config):
+    # Get global settings, with defaults
+    settings = config_data.get("settings", {})
+    download_dir = settings.get("download_directory", "downloads")
+    yt_dlp_args = settings.get("yt-dlp_args", [])
+    series_list = config_data.get("series", [])
+
+    if not series_list:
+        print("⚠️ В конфиге не найдено ни одного сериала для отслеживания.")
+        return
+
+    for i, series in enumerate(series_list):
         print(f"\n🎬 --- Работа с сериалом: {series['name']} ---")
         
         with requests.Session() as session:
@@ -43,10 +53,22 @@ def main():
                         continue
                     
                     print(f"    ➡️ Финальная ссылка: {final_url}")
-                    if download_with_yt_dlp(final_url, series['name'], episode_data['season'], episode_data['episode']):
-                        config[i]['last'] = episode_data['episode']
-                        save_config(config)
-                        print(f"    💾 Обновлен конфиг: последняя серия {episode_data['episode']}.")
+                    download_params = {
+                        "url": final_url,
+                        "series_name": series['name'],
+                        "season": episode_data['season'],
+                        "episode": episode_data['episode'],
+                        "output_dir": download_dir,
+                        "yt_dlp_args": yt_dlp_args
+                    }
+
+                    if download_with_yt_dlp(**download_params):
+                        # Find the correct index in the original config_data
+                        original_series_index = next((idx for idx, s in enumerate(config_data['series']) if s['name'] == series['name']), None)
+                        if original_series_index is not None:
+                            config_data['series'][original_series_index]['last'] = episode_data['episode']
+                            save_config(config_data)
+                            print(f"    💾 Обновлен конфиг: последняя серия {episode_data['episode']}.")
                     
                 except Exception as e:
                     print(f"    ❌ Ошибка при обработке серии {episode_data['episode']}: {e}")
