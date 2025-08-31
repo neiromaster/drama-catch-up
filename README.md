@@ -17,21 +17,30 @@ The script periodically checks the series pages specified in `config.yaml`. If i
 
 2.  **Configuration File:**
 
-    Create or edit the `config.yaml` file. Add the series you want to track in the following format:
+    Create or edit the `config.yaml` file. It's separated into a `settings` block for global options and a `series` list for the shows you want to track.
 
     ```yaml
-    - name: "Series Name"
-      url: "https://filecrypt.cc/Container/CONTAINER.html"
-      last: 0 # The number of the last downloaded episode
-    
-    - name: "Another Series"
-      url: "https://filecrypt.cc/Container/ANOTHER_CONTAINER.html"
-      last: 15
-    ```
+    # Global settings for the script
+    settings:
+      # The root directory where series should be downloaded
+      download_directory: "downloads"
+      
+      # Custom arguments for yt-dlp
+      # Example for multi-threaded downloading:
+      yt-dlp_args:
+        - "--concurrent-fragments"
+        - "4"
 
-    - `name`: The name of the series. This will be used to create a folder for the downloaded files.
-    - `url`: The link to the "container" page that lists all the episodes.
-    - `last`: The number of the last episode that was downloaded. The script will look for all episodes with a number greater than this.
+    # List of series to track
+    series:
+      - name: "Series Name"
+        url: "https://filecrypt.cc/Container/YOUR_CONTAINER_ID.html"
+        last: 0 # The number of the last downloaded episode
+      
+      - name: "Another Series"
+        url: "https://filecrypt.cc/Container/ANOTHER_ID.html"
+        last: 15
+    ```
 
 ## Usage
 
