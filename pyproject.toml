@@ -7,5 +7,12 @@ requires-python = ">=3.13"
 dependencies = []
 
 [project.optional-dependencies]
-build = ["pyinstaller"]
+build = ["pyinstaller", "ruff"]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.format]
+quote-style = "double"
+
 

@@ -1,7 +1,10 @@
 import os
 import subprocess
 
-def download_with_yt_dlp(url, series_name, season, episode, output_dir, yt_dlp_args=None):
+
+def download_with_yt_dlp(
+    url, series_name, season, episode, output_dir, yt_dlp_args=None
+):
     """Runs yt-dlp to download a video, showing only the progress bar."""
     if yt_dlp_args is None:
         yt_dlp_args = []
@@ -9,19 +12,29 @@ def download_with_yt_dlp(url, series_name, season, episode, output_dir, yt_dlp_a
     print(f"  🔽 [yt-dlp] Попытка скачивания серии {episode}...")
     series_folder = os.path.join(output_dir, series_name)
     os.makedirs(series_folder, exist_ok=True)
-    
-    output_template = f"{series_folder}/{series_name} - S{season:02d}E{episode:02d}.%(ext)s"
+
+    output_template = (
+        f"{series_folder}/{series_name} - S{season:02d}E{episode:02d}.%(ext)s"
+    )
 
     try:
-        command = [
-            "uv", "run", "--", "yt-dlp",
-            "--output", output_template,
-            "--quiet",
-            "--progress",
-        ] + yt_dlp_args + [url]
+        command = (
+            [
+                "uv",
+                "run",
+                "--",
+                "yt-dlp",
+                "--output",
+                output_template,
+                "--quiet",
+                "--progress",
+            ]
+            + yt_dlp_args
+            + [url]
+        )
 
         subprocess.run(command, check=True)
-        
+
         print(f"\n  ✅ [yt-dlp] Скачивание серии {episode} успешно завершено.")
         return True
     except subprocess.CalledProcessError:

@@ -1,5 +1,6 @@
 import yaml
 
+
 def load_config(path="config.yaml"):
     """Loads the configuration from a YAML file."""
     try:
@@ -7,6 +8,7 @@ def load_config(path="config.yaml"):
             return yaml.safe_load(f)
     except FileNotFoundError:
         return None
+
 
 def save_config(data, path="config.yaml"):
     """Saves the data to a YAML file."""
