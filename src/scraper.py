@@ -1,6 +1,25 @@
 import re
+import time
 import requests
 from bs4 import BeautifulSoup
+
+
+def get_with_retries(session, url, retries=3, backoff_factor=5, timeout=30, **kwargs):
+    """Wrapper for session.get with retries and exponential backoff."""
+    for attempt in range(retries):
+        try:
+            response = session.get(url, timeout=timeout, **kwargs)
+            response.raise_for_status()
+            return response
+        except requests.exceptions.RequestException as e:
+            if attempt < retries - 1:
+                sleep_time = backoff_factor * (2**attempt)
+                print(
+                    f"    ⏳ Ошибка '{e}', повторная попытка через {sleep_time} секунд..."
+                )
+                time.sleep(sleep_time)
+            else:
+                raise e
 
 
 def parse_series_links(html_content, series_info):
@@ -48,15 +67,13 @@ def parse_series_links(html_content, series_info):
 
 def get_final_download_url(session, episode_link):
     """Resolves the intermediate redirect to get the final download URL."""
-    link_page_response = session.get(episode_link, timeout=15)
-    link_page_response.raise_for_status()
+    link_page_response = get_with_retries(session, episode_link)
 
     js_match = re.search(r"top\.location\.href='(.*?)'", link_page_response.text)
     if not js_match:
         raise ValueError("Could not find intermediate JS redirect link.")
 
     intermediate_url = js_match.group(1)
-    final_response = session.get(intermediate_url, allow_redirects=True, timeout=15)
-    final_response.raise_for_status()
+    final_response = get_with_retries(session, intermediate_url, allow_redirects=True)
 
     return final_response.url

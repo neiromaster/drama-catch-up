@@ -1,6 +1,8 @@
+import random
+import time
 import requests
 from src.config import load_config, save_config
-from src.scraper import parse_series_links, get_final_download_url
+from src.scraper import parse_series_links, get_final_download_url, get_with_retries
 from src.downloader import download_with_yt_dlp
 
 
@@ -22,6 +24,11 @@ def run_check():
 
     print("\n---")
     for i, series in enumerate(series_list):
+        if i > 0:
+            delay = random.randint(10, 25)
+            print(f"⏸️ --- Пауза {delay} секунд перед следующим сериалом ---")
+            time.sleep(delay)
+
         print(f"\n🎬 --- Работа с сериалом: {series['name']} ---")
 
         with requests.Session() as session:
@@ -32,32 +39,38 @@ def run_check():
             )
 
             try:
-                print(f"📄 Загрузка страницы контейнера: {series['url']}")
-                response = session.get(series["url"], timeout=15)
-                response.raise_for_status()
+                print(f"  📄 Загрузка страницы контейнера: {series['url']}")
+                response = get_with_retries(session, series["url"])
                 html_content = response.text
             except requests.RequestException as e:
-                print(f"❌ Ошибка при загрузке страницы контейнера: {e}")
+                print(f"  ❌ Ошибка при загрузке страницы контейнера: {e}")
                 continue
 
             new_episodes = parse_series_links(html_content, series)
             if not new_episodes:
-                print("✅ Новых серий не найдено.")
+                print("  ✅ Новых серий не найдено.")
                 continue
 
-            print(f"✨ Найдено {len(new_episodes)} новых серий. Обработка...")
+            download_delay = random.randint(5, 15)
+            print(
+                f"  ✨ Найдено {len(new_episodes)} новых серий. Пауза {download_delay} секунд перед началом обработки..."
+            )
+            time.sleep(download_delay)
+
             for episode_data in new_episodes:
                 try:
                     print(
-                        f"  🔗 Серия {episode_data['episode']}: обработка ссылки {episode_data['link']}"
+                        f"    🔗 Серия {episode_data['episode']}: обработка ссылки {episode_data['link']}"
                     )
                     final_url = get_final_download_url(session, episode_data["link"])
 
                     if "gofile.io" not in final_url:
-                        print(f"    ⚠️ Конечный URL не ведет на gofile.io: {final_url}")
+                        print(
+                            f"      ⚠️ Конечный URL не ведет на gofile.io: {final_url}"
+                        )
                         continue
 
-                    print(f"    ➡️ Финальная ссылка: {final_url}")
+                    print(f"      ➡️ Финальная ссылка: {final_url}")
                     download_params = {
                         "url": final_url,
                         "series_name": series["name"],
@@ -83,7 +96,7 @@ def run_check():
                             ] = episode_data["episode"]
                             save_config(current_config)
                             print(
-                                f"    💾 Обновлен конфиг: последняя серия {episode_data['episode']}."
+                                f"      💾 Обновлен конфиг: последняя серия {episode_data['episode']}."
                             )
 
                 except Exception as e:

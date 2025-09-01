@@ -13,7 +13,7 @@ def download_with_yt_dlp(
     if yt_dlp_args is None:
         yt_dlp_args = []
 
-    print(f"  🔽 [yt-dlp] Попытка скачивания серии {episode}...")
+    print(f"      🔽 [yt-dlp] Попытка скачивания серии {episode}...")
 
     with tempfile.TemporaryDirectory() as temp_dir:
         output_template = os.path.join(
@@ -38,11 +38,13 @@ def download_with_yt_dlp(
 
             subprocess.run(command, check=True)
 
-            print("\n  ⌛ [yt-dlp] Перемещение файла...")
+            print("\n      ⌛ [yt-dlp] Перемещение файла...")
 
             downloaded_files = glob.glob(os.path.join(temp_dir, "*"))
             if not downloaded_files:
-                print(f"\n  ❌ [yt-dlp] Ошибка: скачанный файл не найден в {temp_dir}.")
+                print(
+                    f"\n      ❌ [yt-dlp] Ошибка: скачанный файл не найден в {temp_dir}."
+                )
                 return False
 
             downloaded_file = downloaded_files[0]
@@ -54,12 +56,12 @@ def download_with_yt_dlp(
             shutil.move(downloaded_file, final_path)
 
             print(
-                f"\n  ✅ [yt-dlp] Скачивание и перемещение серии {episode} успешно завершено."
+                f"\n      ✅ [yt-dlp] Скачивание и перемещение серии {episode} успешно завершено."
             )
             return True
         except subprocess.CalledProcessError:
-            print(f"\n  ❌ [yt-dlp] Ошибка при скачивании серии {episode}.")
+            print(f"\n      ❌ [yt-dlp] Ошибка при скачивании серии {episode}.")
             return False
         except KeyboardInterrupt:
-            print("\n  🛑 Скачивание прервано пользователем.")
+            print("\n      🛑 Скачивание прервано пользователем.")
             return False
