@@ -7,13 +7,15 @@ on:
 
 jobs:
   build:
-    name: Build for ${{ matrix.os }}
+    name: Build for ${{ matrix.os }} (${{ matrix.arch }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
           - os: ubuntu-latest
             arch: x64
+          - os: ubuntu-latest
+            arch: arm64
           - os: windows-latest
             arch: x64
           - os: macos-latest
@@ -44,12 +46,12 @@ jobs:
         run: uv sync --all-extras
 
       - name: Build with PyInstaller
-        run: uv run pyinstaller main.py --onefile --name drama-catch-up-${{ matrix.os }}
+        run: uv run pyinstaller main.py --onefile --name drama-catch-up-${{ matrix.os }}-${{ matrix.arch }}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: drama-catch-up-${{ matrix.os }}
+          name: drama-catch-up-${{ matrix.os }}-${{ matrix.arch }}
           path: dist/*
 
   create-release:
