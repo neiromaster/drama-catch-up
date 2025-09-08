@@ -8,6 +8,12 @@ settings:
 
   # The root directory where series should be downloaded
   download_directory: "downloads"
+
+  # Number of download retries for each episode
+  download_retries: 3
+
+  # Delay between download retries in seconds
+  download_retry_delay: 5
   
   # Custom arguments for yt-dlp
   # Example for multi-threaded downloading:

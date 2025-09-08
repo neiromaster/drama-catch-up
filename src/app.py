@@ -16,6 +16,8 @@ def run_check():
     settings = config_data.get("settings", {})
     download_dir = settings.get("download_directory", "downloads")
     yt_dlp_args = settings.get("yt-dlp_args", [])
+    download_retries = settings.get("download_retries", 1)
+    download_retry_delay = settings.get("download_retry_delay", 5)
     series_list = config_data.get("series", [])
 
     if not series_list:
@@ -78,6 +80,8 @@ def run_check():
                         "episode": episode_data["episode"],
                         "output_dir": download_dir,
                         "yt_dlp_args": yt_dlp_args,
+                        "retries": download_retries,
+                        "retry_delay": download_retry_delay,
                     }
 
                     if download_with_yt_dlp(**download_params):
