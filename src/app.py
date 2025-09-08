@@ -102,6 +102,8 @@ def run_check():
                             print(
                                 f"      💾 Обновлен конфиг: последняя серия {episode_data['episode']}."
                             )
+                    else:
+                        break
 
                 except Exception as e:
                     print(
