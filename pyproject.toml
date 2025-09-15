@@ -8,6 +8,7 @@ dependencies = [
     "requests",
     "pyyaml",
     "beautifulsoup4",
+    "browser-cookie3",
 ]
 
 [project.optional-dependencies]

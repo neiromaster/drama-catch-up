@@ -26,6 +26,7 @@ def parse_series_links(html_content, series_info):
     """Finds links to new episodes for a series."""
     soup = BeautifulSoup(html_content, "html.parser")
     found_links = []
+    total_episodes_in_container = 0
     last_downloaded = series_info.get("series", 0)
 
     for row in soup.find_all("tr", class_="kwj3"):
@@ -40,6 +41,8 @@ def parse_series_links(html_content, series_info):
         match = re.search(r"[Ss](\d+)[Ee](\d+)", filename)
         if not match:
             continue
+
+        total_episodes_in_container += 1
 
         season_num, episode_num = int(match.group(1)), int(match.group(2))
         if episode_num <= last_downloaded:
@@ -62,7 +65,7 @@ def parse_series_links(html_content, series_info):
                         "filename": filename,
                     }
                 )
-    return sorted(found_links, key=lambda x: x["episode"])
+    return total_episodes_in_container, sorted(found_links, key=lambda x: x["episode"])
 
 
 def get_final_download_url(session, episode_link):

@@ -14,7 +14,7 @@ settings:
 
   # Delay between download retries in seconds
   download_retry_delay: 5
-  
+
   # Custom arguments for yt-dlp
   # Example for multi-threaded downloading:
   yt-dlp_args:
@@ -22,6 +22,13 @@ settings:
     - "4"
     # - "--limit-rate"
     # - "10M"
+  
+  # Cookie settings for requests
+  cookies:
+    # Set to true to enable loading cookies from a browser
+    enable: false
+    # Supported browsers: "firefox", "chrome", "brave", "opera", "edge", "chromium", "vivaldi", "safari"
+    browser: "firefox"
 
 # List of series to track
 series:

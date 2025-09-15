@@ -1,6 +1,7 @@
 import random
 import time
 import requests
+import browser_cookie3
 from src.config import load_config, save_config
 from src.scraper import parse_series_links, get_final_download_url, get_with_retries
 from src.downloader import download_with_yt_dlp
@@ -18,6 +19,7 @@ def run_check():
     yt_dlp_args = settings.get("yt-dlp_args", [])
     download_retries = settings.get("download_retries", 1)
     download_retry_delay = settings.get("download_retry_delay", 5)
+    cookie_settings = settings.get("cookies", {"enable": False})
     series_list = config_data.get("series", [])
 
     if not series_list:
@@ -36,9 +38,19 @@ def run_check():
         with requests.Session() as session:
             session.headers.update(
                 {
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0"
                 }
             )
+
+            if cookie_settings.get("enable", False):
+                try:
+                    browser = cookie_settings.get("browser", "firefox")
+                    print(f"  🍪 Загрузка cookies из {browser}...")
+                    cj = getattr(browser_cookie3, browser)(domain_name="filecrypt.cc")
+                    session.cookies.update(cj)
+                    print("  ✅ Cookies успешно загружены.")
+                except Exception as e:
+                    print(f"  ❌ Не удалось загрузить cookies: {e}")
 
             try:
                 print(f"  📄 Загрузка страницы контейнера: {series['url']}")
@@ -48,7 +60,13 @@ def run_check():
                 print(f"  ❌ Ошибка при загрузке страницы контейнера: {e}")
                 continue
 
-            new_episodes = parse_series_links(html_content, series)
+            total_episodes, new_episodes = parse_series_links(html_content, series)
+            if total_episodes == 0:
+                print(
+                    "  ⚠️ На странице не найдено ни одной серии. Возможно, нужно пройти капчу."
+                )
+                continue
+
             if not new_episodes:
                 print("  ✅ Новых серий не найдено.")
                 continue
