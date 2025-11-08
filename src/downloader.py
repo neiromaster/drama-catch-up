@@ -11,7 +11,10 @@ import base64
 def _perform_pixeldrain_download(
     download_url, series_name, season, episode, output_dir, headers
 ):
-    """Helper function to perform the actual download."""
+    """
+    Helper function to perform a single download attempt from pixeldrain.
+    Returns 'success', 'low_speed', or 'failed'.
+    """
     try:
         with requests.get(download_url, headers=headers, stream=True) as r:
             r.raise_for_status()
@@ -42,6 +45,7 @@ def _perform_pixeldrain_download(
                 total_size = int(r.headers.get("content-length", 0))
                 downloaded_size = 0
                 start_time = time.time()
+                speed_checked = False
 
                 for chunk in r.iter_content(chunk_size=8192):
                     temp_file.write(chunk)
@@ -53,6 +57,15 @@ def _perform_pixeldrain_download(
                             if elapsed_time > 0
                             else 0
                         )
+
+                        if not headers and not speed_checked and elapsed_time > 5:
+                            speed_checked = True
+                            if speed < 1100:
+                                print(
+                                    "\n      ❌ [pixeldrain] Низкая скорость скачивания (< 1100 KB/s)."
+                                )
+                                return "low_speed"
+
                         progress = downloaded_size / total_size * 100
                         print(
                             f"\r      [pixeldrain] {progress:.1f}% of {total_size / 1024 / 1024:.2f}MB at {speed:.1f} KB/s",
@@ -68,7 +81,7 @@ def _perform_pixeldrain_download(
         print(
             f"\n      ✅ [pixeldrain] Скачивание и перемещение серии {episode} успешно завершено."
         )
-        return True
+        return "success"
 
     except requests.exceptions.RequestException as e:
         print(f"\n      ❌ [pixeldrain] Ошибка при скачивании серии {episode}: {e}")
@@ -79,10 +92,10 @@ def _perform_pixeldrain_download(
                     print("      ❌ Файл требует капчу для скачивания без ключа.")
             except Exception:
                 pass
-        return False
+        return "failed"
     except KeyboardInterrupt:
         print("\n      🛑 Скачивание прервано пользователем.")
-        return False
+        raise
     finally:
         if "temp_path" in locals() and os.path.exists(temp_path):
             os.remove(temp_path)
@@ -94,49 +107,64 @@ def download_with_pixeldrain(
     season,
     episode,
     output_dir,
-    retries=1,
+    retries=3,
     retry_delay=5,
     api_key=None,
 ):
-    """Downloads a file from pixeldrain, trying without key first."""
+    """Downloads a file from pixeldrain with a robust two-phase retry logic."""
     file_id = url.split("/")[-1]
     download_url = f"https://pixeldrain.com/api/file/{file_id}"
 
+    # --- Phase 1: Download without API Key ---
+    print(f"      --- [pixeldrain] Этап 1: Скачивание серии {episode} без ключа ---")
     for attempt in range(retries):
-        print(
-            f"      🔽 [pixeldrain] Попытка скачивания серии {episode} (попытка {attempt + 1}/{retries})..."
+        print(f"      Попытка {attempt + 1}/{retries}...")
+        status = _perform_pixeldrain_download(
+            download_url, series_name, season, episode, output_dir, headers={}
         )
 
-        # 1. Try without key
-        print("      Попытка #1: Скачивание без API ключа.")
-        if _perform_pixeldrain_download(
-            download_url, series_name, season, episode, output_dir, headers={}
-        ):
+        if status == "success":
             return True
 
-        # 2. If it fails and key exists, try with key
-        if api_key:
-            print("\n      Попытка #2: Скачивание с API ключом.")
-            auth_str = f":{api_key}"
-            headers = {
-                "Authorization": "Basic " + base64.b64encode(auth_str.encode()).decode()
-            }
-            if _perform_pixeldrain_download(
-                download_url,
-                series_name,
-                season,
-                episode,
-                output_dir,
-                headers=headers,
-            ):
-                return True
+        if status == "low_speed":
+            print("      Низкая скорость. Переход к скачиванию с ключом.")
+            break  # Break from this loop to start Phase 2
 
         if attempt < retries - 1:
-            print(f"      ▩ Повторная попытка через {retry_delay} секунд...")
+            print(f"      Ошибка. Повтор через {retry_delay} секунд...")
+            time.sleep(retry_delay)
+
+    # --- Phase 2: Download with API Key ---
+    if not api_key:
+        print(
+            f"\n      ❌ [pixeldrain] Не удалось скачать серию {episode} без ключа. API ключ не найден."
+        )
+        return False
+
+    print(f"\n      --- [pixeldrain] Этап 2: Скачивание серии {episode} с ключом ---")
+    auth_str = f":{api_key}"
+    headers = {"Authorization": "Basic " + base64.b64encode(auth_str.encode()).decode()}
+    for attempt in range(retries):
+        print(f"      Попытка {attempt + 1}/{retries}...")
+        # The low_speed check in _perform is skipped when headers are present
+        status = _perform_pixeldrain_download(
+            download_url,
+            series_name,
+            season,
+            episode,
+            output_dir,
+            headers=headers,
+        )
+
+        if status == "success":
+            return True
+
+        if attempt < retries - 1:
+            print(f"      Ошибка. Повтор через {retry_delay} секунд...")
             time.sleep(retry_delay)
 
     print(
-        f"\n      ❌ [pixeldrain] Не удалось скачать серию {episode} после {retries} попыток."
+        f"\n      ❌ [pixeldrain] Не удалось скачать серию {episode} после всех попыток."
     )
     return False
 
@@ -148,7 +176,7 @@ def download_with_yt_dlp(
     episode,
     output_dir,
     yt_dlp_args=None,
-    retries=1,
+    retries=3,
     retry_delay=5,
 ):
     """Runs yt-dlp to download a video to a temporary directory,

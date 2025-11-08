@@ -18,7 +18,7 @@ def run_check():
     settings = config_data.get("settings", {})
     download_dir = settings.get("download_directory", "downloads")
     yt_dlp_args = settings.get("yt-dlp_args", [])
-    download_retries = settings.get("download_retries", 1)
+    download_retries = settings.get("download_retries", 3)
     download_retry_delay = settings.get("download_retry_delay", 5)
     cookie_settings = settings.get("cookies", {"enable": False})
     pixeldrain_api_key = settings.get("pixeldrain_api_key")
