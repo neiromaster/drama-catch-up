@@ -3,7 +3,19 @@ import time
 import requests
 import base64
 import sys
-from dotenv import load_dotenv
+import yaml
+
+
+def load_config():
+    """Loads the YAML configuration file."""
+    try:
+        with open("config.yaml", "r", encoding="utf-8") as f:
+            return yaml.safe_load(f)
+    except FileNotFoundError:
+        return None
+    except Exception as e:
+        print(f"❌ Ошибка при загрузке config.yaml: {e}")
+        return None
 
 
 def download_file(file_id, api_key=None):
@@ -83,8 +95,10 @@ def download_file(file_id, api_key=None):
 
 def main():
     """Main function to run the downloader script."""
-    load_dotenv()
-    api_key = os.getenv("PIXELDRAIN_API_KEY")
+    config_data = load_config()
+    api_key = None
+    if config_data:
+        api_key = config_data.get("settings", {}).get("pixeldrain_api_key")
 
     url = input("Введите ссылку на файл pixeldrain: ")
     if not url:
@@ -98,7 +112,7 @@ def main():
             print("\n      Повторная попытка с использованием API ключа...")
             download_file(file_id, api_key=api_key)
         else:
-            print("\n      API ключ не найден в .env файле. Невозможно повторить попытку.")
+            print("\n      API ключ не найден в config.yaml. Невозможно повторить попытку.")
 
 
 if __name__ == "__main__":
