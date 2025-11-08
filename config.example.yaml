@@ -30,6 +30,9 @@ settings:
     # Supported browsers: "firefox", "chrome", "brave", "opera", "edge", "chromium", "vivaldi", "safari"
     browser: "firefox"
 
+  # API key for pixeldrain.com
+  pixeldrain_api_key: ""
+
 # List of series to track
 series:
   - name: "Name of the Series"

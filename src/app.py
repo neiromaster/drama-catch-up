@@ -2,9 +2,10 @@ import random
 import time
 import requests
 import browser_cookie3
+import itertools
 from src.config import load_config, save_config
 from src.scraper import parse_series_links, get_final_download_url, get_with_retries
-from src.downloader import download_with_yt_dlp
+from src.downloader import download_with_yt_dlp, download_with_pixeldrain
 
 
 def run_check():
@@ -20,6 +21,7 @@ def run_check():
     download_retries = settings.get("download_retries", 1)
     download_retry_delay = settings.get("download_retry_delay", 5)
     cookie_settings = settings.get("cookies", {"enable": False})
+    pixeldrain_api_key = settings.get("pixeldrain_api_key")
     series_list = config_data.get("series", [])
 
     if not series_list:
@@ -73,59 +75,97 @@ def run_check():
 
             download_delay = random.randint(5, 15)
             print(
-                f"  ✨ Найдено {len(new_episodes)} новых серий. Пауза {download_delay} секунд перед началом обработки..."
+                f"  ✨ Найдено {len(new_episodes)} уникальных ссылок на новые серии. Пауза {download_delay} секунд перед началом обработки..."
             )
             time.sleep(download_delay)
 
-            for episode_data in new_episodes:
-                try:
-                    print(
-                        f"    🔗 Серия {episode_data['episode']}: обработка ссылки {episode_data['link']}"
-                    )
-                    final_url = get_final_download_url(session, episode_data["link"])
+            # Group episodes by episode number
+            episodes_to_download = {
+                k: list(g)
+                for k, g in itertools.groupby(
+                    new_episodes, key=lambda x: x["episode"]
+                )
+            }
 
-                    if "gofile.io" not in final_url:
+            for episode_num, links in episodes_to_download.items():
+                download_successful = False
+                # Sort links to prioritize gofile
+                sorted_links = sorted(
+                    links, key=lambda x: x["source"] != "gofile"
+                )
+
+                for episode_data in sorted_links:
+                    try:
                         print(
-                            f"      ⚠️ Конечный URL не ведет на gofile.io: {final_url}"
+                            f"    🔗 Серия {episode_data['episode']} ({episode_data['source']}): обработка ссылки {episode_data['link']}"
                         )
-                        continue
-
-                    print(f"      ➡️ Финальная ссылка: {final_url}")
-                    download_params = {
-                        "url": final_url,
-                        "series_name": series["name"],
-                        "season": episode_data["season"],
-                        "episode": episode_data["episode"],
-                        "output_dir": download_dir,
-                        "yt_dlp_args": yt_dlp_args,
-                        "retries": download_retries,
-                        "retry_delay": download_retry_delay,
-                    }
-
-                    if download_with_yt_dlp(**download_params):
-                        current_config = load_config()
-                        original_series_index = next(
-                            (
-                                idx
-                                for idx, s in enumerate(current_config["series"])
-                                if s["name"] == series["name"]
-                            ),
-                            None,
+                        final_url = get_final_download_url(
+                            session, episode_data["link"]
                         )
-                        if original_series_index is not None:
-                            current_config["series"][original_series_index][
-                                "series"
-                            ] = episode_data["episode"]
-                            save_config(current_config)
-                            print(
-                                f"      💾 Обновлен конфиг: последняя серия {episode_data['episode']}."
+                        print(f"      ➡️ Финальная ссылка: {final_url}")
+
+                        if episode_data["source"] == "gofile":
+                            download_params = {
+                                "url": final_url,
+                                "series_name": series["name"],
+                                "season": episode_data["season"],
+                                "episode": episode_data["episode"],
+                                "output_dir": download_dir,
+                                "yt_dlp_args": yt_dlp_args,
+                                "retries": download_retries,
+                                "retry_delay": download_retry_delay,
+                            }
+                            download_successful = download_with_yt_dlp(
+                                **download_params
                             )
-                    else:
-                        break
+                        elif episode_data["source"] == "pixeldrain":
+                            download_params = {
+                                "url": final_url,
+                                "series_name": series["name"],
+                                "season": episode_data["season"],
+                                "episode": episode_data["episode"],
+                                "output_dir": download_dir,
+                                "retries": download_retries,
+                                "retry_delay": download_retry_delay,
+                                "api_key": pixeldrain_api_key,
+                            }
+                            download_successful = download_with_pixeldrain(
+                                **download_params
+                            )
 
-                except Exception as e:
+                        if download_successful:
+                            current_config = load_config()
+                            original_series_index = next(
+                                (
+                                    idx
+                                    for idx, s in enumerate(
+                                        current_config["series"]
+                                    )
+                                    if s["name"] == series["name"]
+                                ),
+                                None,
+                            )
+                            if original_series_index is not None:
+                                current_config["series"][original_series_index][
+                                    "series"
+                                ] = episode_data["episode"]
+                                save_config(current_config)
+                                print(
+                                    f"      💾 Обновлен конфиг: последняя серия {episode_data['episode']}."
+                                )
+                            break  # Move to the next episode
+                        else:
+                            print(
+                                f"      ⚠️ Не удалось скачать с {episode_data['source']}. Пробую следующий источник..."
+                            )
+
+                    except Exception as e:
+                        print(
+                            f"    ❌ Ошибка при обработке серии {episode_data['episode']} с источника {episode_data['source']}: {e}"
+                        )
+                if not download_successful:
                     print(
-                        f"    ❌ Ошибка при обработке серии {episode_data['episode']}: {e}"
+                        f"  ❌ Не удалось скачать серию {episode_num} со всех источников."
                     )
 
     return settings.get("check_interval_minutes", 10)

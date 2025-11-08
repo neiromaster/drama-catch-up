@@ -30,10 +30,23 @@ def parse_series_links(html_content, series_info):
     last_downloaded = series_info.get("series", 0)
 
     for row in soup.find_all("tr", class_="kwj3"):
-        if not row.find(
+        gofile_link = row.find(
             "a", class_="external_link", string=lambda t: t and "gofile.io" in t.lower()
-        ):
+        )
+        pixeldrain_link = row.find(
+            "a",
+            class_="external_link",
+            string=lambda t: t and "pixeldrain.com" in t.lower(),
+        )
+
+        source = None
+        if gofile_link:
+            source = "gofile"
+        elif pixeldrain_link:
+            source = "pixeldrain"
+        else:
             continue
+
         title_cell = row.find("td", title=True)
         if not title_cell:
             continue
@@ -63,6 +76,7 @@ def parse_series_links(html_content, series_info):
                         "episode": episode_num,
                         "link": filecrypt_link,
                         "filename": filename,
+                        "source": source,
                     }
                 )
     return total_episodes_in_container, sorted(found_links, key=lambda x: x["episode"])
