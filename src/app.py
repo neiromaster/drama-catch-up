@@ -82,17 +82,13 @@ def run_check():
             # Group episodes by episode number
             episodes_to_download = {
                 k: list(g)
-                for k, g in itertools.groupby(
-                    new_episodes, key=lambda x: x["episode"]
-                )
+                for k, g in itertools.groupby(new_episodes, key=lambda x: x["episode"])
             }
 
             for episode_num, links in episodes_to_download.items():
                 download_successful = False
                 # Sort links to prioritize gofile
-                sorted_links = sorted(
-                    links, key=lambda x: x["source"] != "gofile"
-                )
+                sorted_links = sorted(links, key=lambda x: x["source"] != "gofile")
 
                 for episode_data in sorted_links:
                     try:
@@ -138,9 +134,7 @@ def run_check():
                             original_series_index = next(
                                 (
                                     idx
-                                    for idx, s in enumerate(
-                                        current_config["series"]
-                                    )
+                                    for idx, s in enumerate(current_config["series"])
                                     if s["name"] == series["name"]
                                 ),
                                 None,

@@ -27,7 +27,7 @@ def _perform_pixeldrain_download(
                         server_filename = part.split("=")[1].strip().strip('"')
                         _, extension = os.path.splitext(server_filename)
                         break
-            
+
             if not extension:
                 content_type = r.headers.get("content-type")
                 if content_type:
@@ -119,8 +119,7 @@ def download_with_pixeldrain(
             print("\n      Попытка #2: Скачивание с API ключом.")
             auth_str = f":{api_key}"
             headers = {
-                "Authorization": "Basic "
-                + base64.b64encode(auth_str.encode()).decode()
+                "Authorization": "Basic " + base64.b64encode(auth_str.encode()).decode()
             }
             if _perform_pixeldrain_download(
                 download_url,
@@ -140,8 +139,6 @@ def download_with_pixeldrain(
         f"\n      ❌ [pixeldrain] Не удалось скачать серию {episode} после {retries} попыток."
     )
     return False
-
-
 
 
 def download_with_yt_dlp(

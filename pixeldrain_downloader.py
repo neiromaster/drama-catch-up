@@ -1,4 +1,3 @@
-import os
 import time
 import requests
 import base64
@@ -30,9 +29,9 @@ def download_file(file_id, api_key=None):
     headers = {}
     if api_key:
         auth_str = f":{api_key}"
-        headers["Authorization"] = "Basic " + base64.b64encode(
-            auth_str.encode()
-        ).decode()
+        headers["Authorization"] = (
+            "Basic " + base64.b64encode(auth_str.encode()).decode()
+        )
         print("      🔑 Попытка скачивания с API ключом...")
     else:
         print("      🔽 Попытка скачивания без ключа...")
@@ -50,7 +49,7 @@ def download_file(file_id, api_key=None):
                         filename_part = part.split("=")[1].strip()
                         filename = filename_part.strip('"')
                         break
-            
+
             print(f"      📄 Имя файла: {filename}")
 
             with open(filename, "wb") as f:
@@ -84,9 +83,9 @@ def download_file(file_id, api_key=None):
                 if error_data.get("value") == "file_rate_limited_captcha_required":
                     print("      ❌ Файл требует капчу для скачивания без ключа.")
                 elif error_data.get("value") == "virus_detected_captcha_required":
-                     print("      ❌ В файле обнаружен вирус, требуется капча.")
+                    print("      ❌ В файле обнаружен вирус, требуется капча.")
             except Exception:
-                pass # Ignore if response is not json
+                pass  # Ignore if response is not json
         return False
     except KeyboardInterrupt:
         print("\n      🛑 Скачивание прервано пользователем.")
@@ -112,7 +111,9 @@ def main():
             print("\n      Повторная попытка с использованием API ключа...")
             download_file(file_id, api_key=api_key)
         else:
-            print("\n      API ключ не найден в config.yaml. Невозможно повторить попытку.")
+            print(
+                "\n      API ключ не найден в config.yaml. Невозможно повторить попытку."
+            )
 
 
 if __name__ == "__main__":
