@@ -16,17 +16,26 @@ def _perform_pixeldrain_download(
         with requests.get(download_url, headers=headers, stream=True) as r:
             r.raise_for_status()
 
+            base_filename = f"{series_name} - S{season:02d}E{episode:02d}"
+            extension = ""
+
             content_disposition = r.headers.get("content-disposition")
-            filename = f"{series_name} - S{season:02d}E{episode:02d}"
             if content_disposition:
                 parts = content_disposition.split(";")
                 for part in parts:
                     if part.strip().startswith("filename="):
-                        filename_part = part.split("=")[1].strip()
-                        filename = filename_part.strip('"')
+                        server_filename = part.split("=")[1].strip().strip('"')
+                        _, extension = os.path.splitext(server_filename)
                         break
-            else:
-                pass  # Fallback to constructed filename
+            
+            if not extension:
+                content_type = r.headers.get("content-type")
+                if content_type:
+                    # A simple mapping from MIME type to extension
+                    mime_map = {"video/mp4": ".mp4", "video/x-matroska": ".mkv"}
+                    extension = mime_map.get(content_type.split(";")[0], "")
+
+            filename = f"{base_filename}{extension}"
 
             with tempfile.NamedTemporaryFile(delete=False) as temp_file:
                 temp_path = temp_file.name
