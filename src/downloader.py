@@ -1,20 +1,30 @@
+import base64
 import glob
 import os
 import shutil
 import subprocess
 import tempfile
 import time
+from typing import Literal
+
 import requests
-import base64
+
+from .constants import PIXELDRAIN_MIN_SPEED_NO_API, PIXELDRAIN_MIN_SPEED_WITH_API
 
 
 def _perform_pixeldrain_download(
-    download_url, series_name, season, episode, output_dir, headers
-):
+    download_url: str,
+    series_name: str,
+    season: int,
+    episode: int,
+    output_dir: str,
+    headers: dict[str, str],
+) -> Literal["success", "low_speed", "failed"]:
     """
     Helper function to perform a single download attempt from pixeldrain.
     Returns 'success', 'low_speed', or 'failed'.
     """
+    temp_path: str = ""
     try:
         with requests.get(download_url, headers=headers, stream=True) as r:
             r.raise_for_status()
@@ -52,23 +62,19 @@ def _perform_pixeldrain_download(
                     downloaded_size += len(chunk)
                     if total_size > 0:
                         elapsed_time = time.time() - start_time
-                        speed = (
-                            downloaded_size / elapsed_time / 1024
-                            if elapsed_time > 0
-                            else 0
-                        )
+                        speed = downloaded_size / elapsed_time / 1024 if elapsed_time > 0 else 0
 
                         if not headers and not speed_checked and elapsed_time > 5:
                             speed_checked = True
-                            if speed < 1100:
-                                print(
-                                    "\n      ❌ [pixeldrain] Низкая скорость скачивания (< 1100 KB/s)."
-                                )
+                            min_speed = PIXELDRAIN_MIN_SPEED_NO_API if not headers else PIXELDRAIN_MIN_SPEED_WITH_API
+                            if speed < min_speed:
+                                print(f"\n      ❌ [pixeldrain] Низкая скорость скачивания (< {min_speed} KB/s).")
                                 return "low_speed"
 
                         progress = downloaded_size / total_size * 100
                         print(
-                            f"\r      [pixeldrain] {progress:.1f}% of {total_size / 1024 / 1024:.2f}MB at {speed:.1f} KB/s",
+                            f"\r      [pixeldrain] {progress:.1f}% of {total_size / 1024 / 1024:.2f}MB "
+                            f"at {speed:.1f} KB/s",
                             end="",
                         )
                 print()
@@ -78,9 +84,7 @@ def _perform_pixeldrain_download(
         os.makedirs(series_folder, exist_ok=True)
         final_path = os.path.join(series_folder, filename)
         shutil.move(temp_path, final_path)
-        print(
-            f"\n      ✅ [pixeldrain] Скачивание и перемещение серии {episode} успешно завершено."
-        )
+        print(f"\n      ✅ [pixeldrain] Скачивание и перемещение серии {episode} успешно завершено.")
         return "success"
 
     except requests.exceptions.RequestException as e:
@@ -97,31 +101,31 @@ def _perform_pixeldrain_download(
         print("\n      🛑 Скачивание прервано пользователем.")
         raise
     finally:
-        if "temp_path" in locals() and os.path.exists(temp_path):
+        if temp_path and os.path.exists(temp_path):
             os.remove(temp_path)
 
 
 def download_with_pixeldrain(
-    url,
-    series_name,
-    season,
-    episode,
-    output_dir,
-    retries=3,
-    retry_delay=5,
-    api_key=None,
-):
+    url: str,
+    series_name: str,
+    season: int,
+    episode: int,
+    output_dir: str,
+    retries: int = 3,
+    retry_delay: int = 5,
+    api_key: str | None = None,
+) -> bool:
     """Downloads a file from pixeldrain with a robust two-phase retry logic."""
     file_id = url.split("/")[-1]
-    download_url = f"https://pixeldrain.com/api/file/{file_id}"
+    from .constants import PIXELDRAIN_API_FILE_URL
+
+    download_url = PIXELDRAIN_API_FILE_URL.format(file_id=file_id)
 
     # --- Phase 1: Download without API Key ---
     print(f"      --- [pixeldrain] Этап 1: Скачивание серии {episode} без ключа ---")
     for attempt in range(retries):
         print(f"      Попытка {attempt + 1}/{retries}...")
-        status = _perform_pixeldrain_download(
-            download_url, series_name, season, episode, output_dir, headers={}
-        )
+        status = _perform_pixeldrain_download(download_url, series_name, season, episode, output_dir, headers={})
 
         if status == "success":
             return True
@@ -136,9 +140,7 @@ def download_with_pixeldrain(
 
     # --- Phase 2: Download with API Key ---
     if not api_key:
-        print(
-            f"\n      ❌ [pixeldrain] Не удалось скачать серию {episode} без ключа. API ключ не найден."
-        )
+        print(f"\n      ❌ [pixeldrain] Не удалось скачать серию {episode} без ключа. API ключ не найден.")
         return False
 
     print(f"\n      --- [pixeldrain] Этап 2: Скачивание серии {episode} с ключом ---")
@@ -163,36 +165,30 @@ def download_with_pixeldrain(
             print(f"      Ошибка. Повтор через {retry_delay} секунд...")
             time.sleep(retry_delay)
 
-    print(
-        f"\n      ❌ [pixeldrain] Не удалось скачать серию {episode} после всех попыток."
-    )
+    print(f"\n      ❌ [pixeldrain] Не удалось скачать серию {episode} после всех попыток.")
     return False
 
 
 def download_with_yt_dlp(
-    url,
-    series_name,
-    season,
-    episode,
-    output_dir,
-    yt_dlp_args=None,
-    retries=3,
-    retry_delay=5,
-):
+    url: str,
+    series_name: str,
+    season: int,
+    episode: int,
+    output_dir: str,
+    yt_dlp_args: list[str] | None = None,
+    retries: int = 3,
+    retry_delay: int = 5,
+) -> bool:
     """Runs yt-dlp to download a video to a temporary directory,
     then moves it to the final destination, showing only the progress bar."""
     if yt_dlp_args is None:
         yt_dlp_args = []
 
     for attempt in range(retries):
-        print(
-            f"      🔽 [yt-dlp] Попытка скачивания серии {episode} (попытка {attempt + 1}/{retries})..."
-        )
+        print(f"      🔽 [yt-dlp] Попытка скачивания серии {episode} (попытка {attempt + 1}/{retries})...")
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            output_template = os.path.join(
-                temp_dir, f"{series_name} - S{season:02d}E{episode:02d}.%(ext)s"
-            )
+            output_template = os.path.join(temp_dir, f"{series_name} - S{season:02d}E{episode:02d}.%(ext)s")
 
             try:
                 command = (
@@ -216,9 +212,7 @@ def download_with_yt_dlp(
 
                 downloaded_files = glob.glob(os.path.join(temp_dir, "*"))
                 if not downloaded_files:
-                    print(
-                        f"\n      ❌ [yt-dlp] Ошибка: скачанный файл не найден в {temp_dir}."
-                    )
+                    print(f"\n      ❌ [yt-dlp] Ошибка: скачанный файл не найден в {temp_dir}.")
                     continue
 
                 downloaded_file = downloaded_files[0]
@@ -226,14 +220,10 @@ def download_with_yt_dlp(
                 series_folder = os.path.join(output_dir, series_name)
                 os.makedirs(series_folder, exist_ok=True)
 
-                final_path = os.path.join(
-                    series_folder, os.path.basename(downloaded_file)
-                )
+                final_path = os.path.join(series_folder, os.path.basename(downloaded_file))
                 shutil.move(downloaded_file, final_path)
 
-                print(
-                    f"\n      ✅ [yt-dlp] Скачивание и перемещение серии {episode} успешно завершено."
-                )
+                print(f"\n      ✅ [yt-dlp] Скачивание и перемещение серии {episode} успешно завершено.")
                 return True
             except subprocess.CalledProcessError:
                 print(f"\n      ❌ [yt-dlp] Ошибка при скачивании серии {episode}.")
@@ -245,7 +235,5 @@ def download_with_yt_dlp(
                 print("\n      🛑 Скачивание прервано пользователем.")
                 return False
 
-    print(
-        f"\n      ❌ [yt-dlp] Не удалось скачать серию {episode} после {retries} попыток."
-    )
+    print(f"\n      ❌ [yt-dlp] Не удалось скачать серию {episode} после {retries} попыток.")
     return False

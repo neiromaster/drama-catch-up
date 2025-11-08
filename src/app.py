@@ -1,14 +1,18 @@
+import itertools
 import random
 import time
-import requests
+from typing import Any
+
 import browser_cookie3
-import itertools
-from src.config import load_config, save_config, DEFAULT_USER_AGENT
-from src.scraper import parse_series_links, get_final_download_url, get_with_retries
-from src.downloader import download_with_yt_dlp, download_with_pixeldrain
+import requests
+
+from src.config import load_config, save_config
+from src.constants import DEFAULT_USER_AGENT
+from src.downloader import download_with_pixeldrain, download_with_yt_dlp
+from src.scraper import get_final_download_url, get_with_retries, parse_series_links
 
 
-def run_check():
+def run_check() -> int:
     """Runs a single check cycle for all series."""
     config_data = load_config()
     if not config_data:
@@ -51,7 +55,7 @@ def run_check():
     return settings.get("check_interval_minutes", 10)
 
 
-def _handle_cookies(session, cookie_settings):
+def _handle_cookies(session: requests.Session, cookie_settings: dict[str, Any]) -> None:
     """Handles loading cookies into the requests session."""
     if cookie_settings.get("enable", False):
         try:
@@ -65,16 +69,16 @@ def _handle_cookies(session, cookie_settings):
 
 
 def _process_single_series(
-    series,
-    config_data,
-    settings,
-    download_dir,
-    yt_dlp_args,
-    download_retries,
-    download_retry_delay,
-    cookie_settings,
-    pixeldrain_api_key,
-):
+    series: dict[str, Any],
+    config_data: dict[str, Any],
+    settings: dict[str, Any],
+    download_dir: str,
+    yt_dlp_args: list[str],
+    download_retries: int,
+    download_retry_delay: int,
+    cookie_settings: dict[str, Any],
+    pixeldrain_api_key: str,
+) -> None:
     """Processes a single series, checking for new episodes and initiating downloads."""
     with requests.Session() as session:
         session.headers.update({"User-Agent": DEFAULT_USER_AGENT})
@@ -91,9 +95,7 @@ def _process_single_series(
 
         total_episodes, new_episodes = parse_series_links(html_content, series)
         if total_episodes == 0:
-            print(
-                "  ⚠️ На странице не найдено ни одной серии. Возможно, нужно пройти капчу."
-            )
+            print("  ⚠️ На странице не найдено ни одной серии. Возможно, нужно пройти капчу.")
             return
 
         if not new_episodes:
@@ -102,15 +104,13 @@ def _process_single_series(
 
         download_delay = random.randint(5, 15)
         print(
-            f"  ✨ Найдено {len(new_episodes)} уникальных ссылок на новые серии. Пауза {download_delay} секунд перед началом обработки..."
+            f"  ✨ Найдено {len(new_episodes)} уникальных ссылок на новые серии."
+            f" Пауза {download_delay} секунд перед началом обработки..."
         )
         time.sleep(download_delay)
 
         # Group episodes by episode number
-        episodes_to_download = {
-            k: list(g)
-            for k, g in itertools.groupby(new_episodes, key=lambda x: x["episode"])
-        }
+        episodes_to_download = {k: list(g) for k, g in itertools.groupby(new_episodes, key=lambda x: x["episode"])}
 
         for episode_num, links in episodes_to_download.items():
             download_successful = False
@@ -120,67 +120,76 @@ def _process_single_series(
             for episode_data in sorted_links:
                 try:
                     print(
-                        f"    🔗 Серия {episode_data['episode']} ({episode_data['source']}): обработка ссылки {episode_data['link']}"
+                        f"    🔗 Серия {episode_data['episode']} ({episode_data['source']}): "
+                        f"обработка ссылки {episode_data['link']}"
                     )
                     final_url = get_final_download_url(session, episode_data["link"])
                     print(f"      ➡️ Финальная ссылка: {final_url}")
 
                     if episode_data["source"] == "gofile":
-                        download_params = {
-                            "url": final_url,
-                            "series_name": series["name"],
-                            "season": episode_data["season"],
-                            "episode": episode_data["episode"],
-                            "output_dir": download_dir,
-                            "yt_dlp_args": yt_dlp_args,
-                            "retries": download_retries,
-                            "retry_delay": download_retry_delay,
-                        }
-                        download_successful = download_with_yt_dlp(**download_params)
+                        # Ensure type safety for download_with_yt_dlp call
+                        url: str = final_url
+                        series_name: str = series["name"]
+                        season: int = episode_data["season"]
+                        episode: int = episode_data["episode"]
+                        output_dir: str = download_dir
+                        yt_dlp_args_local: list[str] = yt_dlp_args
+                        retries: int = download_retries
+                        retry_delay: int = download_retry_delay
+
+                        download_successful = download_with_yt_dlp(
+                            url=url,
+                            series_name=series_name,
+                            season=season,
+                            episode=episode,
+                            output_dir=output_dir,
+                            yt_dlp_args=yt_dlp_args_local,
+                            retries=retries,
+                            retry_delay=retry_delay,
+                        )
                     elif episode_data["source"] == "pixeldrain":
-                        download_params = {
-                            "url": final_url,
-                            "series_name": series["name"],
-                            "season": episode_data["season"],
-                            "episode": episode_data["episode"],
-                            "output_dir": download_dir,
-                            "retries": download_retries,
-                            "retry_delay": download_retry_delay,
-                            "api_key": pixeldrain_api_key,
-                        }
+                        # Ensure type safety for download_with_pixeldrain call
+                        url: str = final_url
+                        series_name: str = series["name"]
+                        season: int = episode_data["season"]
+                        episode: int = episode_data["episode"]
+                        output_dir: str = download_dir
+                        retries: int = download_retries
+                        retry_delay: int = download_retry_delay
+                        api_key: str = pixeldrain_api_key
+
                         download_successful = download_with_pixeldrain(
-                            **download_params
+                            url=url,
+                            series_name=series_name,
+                            season=season,
+                            episode=episode,
+                            output_dir=output_dir,
+                            retries=retries,
+                            retry_delay=retry_delay,
+                            api_key=api_key,
                         )
 
                     if download_successful:
                         current_config = load_config()
+                        if current_config is None:
+                            print("  ❌ Не удалось загрузить конфиг для обновления.")
+                            continue
                         original_series_index = next(
-                            (
-                                idx
-                                for idx, s in enumerate(current_config["series"])
-                                if s["name"] == series["name"]
-                            ),
+                            (idx for idx, s in enumerate(current_config["series"]) if s["name"] == series["name"]),
                             None,
                         )
                         if original_series_index is not None:
-                            current_config["series"][original_series_index][
-                                "series"
-                            ] = episode_data["episode"]
+                            current_config["series"][original_series_index]["series"] = episode_data["episode"]
                             save_config(current_config)
-                            print(
-                                f"      💾 Обновлен конфиг: последняя серия {episode_data['episode']}."
-                            )
+                            print(f"      💾 Обновлен конфиг: последняя серия {episode_data['episode']}.")
                         break  # Move to the next episode
                     else:
-                        print(
-                            f"      ⚠️ Не удалось скачать с {episode_data['source']}. Пробую следующий источник..."
-                        )
+                        print(f"      ⚠️ Не удалось скачать с {episode_data['source']}. Пробую следующий источник...")
 
                 except Exception as e:
                     print(
-                        f"    ❌ Ошибка при обработке серии {episode_data['episode']} с источника {episode_data['source']}: {e}"
+                        f"    ❌ Ошибка при обработке серии {episode_data['episode']} "
+                        f"с источника {episode_data['source']}: {e}"
                     )
             if not download_successful:
-                print(
-                    f"  ❌ Не удалось скачать серию {episode_num} со всех источников."
-                )
+                print(f"  ❌ Не удалось скачать серию {episode_num} со всех источников.")

@@ -1,14 +1,16 @@
-import time
-import requests
-import base64
 import sys
+import time
+from typing import Any
+
 import yaml
 
+from src.constants import PIXELDRAIN_API_FILE_URL
 
-def load_config():
+
+def load_config() -> dict[str, Any] | None:
     """Loads the YAML configuration file."""
     try:
-        with open("config.yaml", "r", encoding="utf-8") as f:
+        with open("config.yaml", encoding="utf-8") as f:
             return yaml.safe_load(f)
     except FileNotFoundError:
         return None
@@ -17,21 +19,26 @@ def load_config():
         return None
 
 
-def perform_download_attempt(file_id, api_key=None):
+def perform_download_attempt(file_id: str, api_key: str | None = None) -> str:
     """
     Performs a single download attempt for a file from pixeldrain.
     Returns 'success', 'low_speed', or 'failed'.
     """
-    download_url = f"https://pixeldrain.com/api/file/{file_id}"
+    import requests
+
+    from src.constants import PIXELDRAIN_MIN_SPEED_NO_API
+
+    download_url = PIXELDRAIN_API_FILE_URL.format(file_id=file_id)
+
     headers = {}
     if api_key:
+        import base64
+
         auth_str = f":{api_key}"
-        headers["Authorization"] = (
-            "Basic " + base64.b64encode(auth_str.encode()).decode()
-        )
+        headers["Authorization"] = "Basic " + base64.b64encode(auth_str.encode()).decode()
 
     try:
-        with requests.get(download_url, headers=headers, stream=True) as r:
+        with open(file_id, "wb") as f, requests.get(download_url, headers=headers, stream=True) as r:
             r.raise_for_status()
 
             content_disposition = r.headers.get("content-disposition")
@@ -46,38 +53,31 @@ def perform_download_attempt(file_id, api_key=None):
 
             print(f"      📄 Имя файла: {filename}")
 
-            with open(filename, "wb") as f:
-                total_size = int(r.headers.get("content-length", 0))
-                downloaded_size = 0
-                start_time = time.time()
-                speed_checked = False
+            total_size = int(r.headers.get("content-length", 0))
+            downloaded_size = 0
+            start_time = time.time()
+            speed_checked = False
 
-                for chunk in r.iter_content(chunk_size=8192):
-                    f.write(chunk)
-                    downloaded_size += len(chunk)
-                    if total_size > 0:
-                        elapsed_time = time.time() - start_time
-                        speed = (
-                            downloaded_size / elapsed_time / 1024
-                            if elapsed_time > 0
-                            else 0
-                        )
+            for chunk in r.iter_content(chunk_size=8192):
+                f.write(chunk)
+                downloaded_size += len(chunk)
+                if total_size > 0:
+                    elapsed_time = time.time() - start_time
+                    speed = downloaded_size / elapsed_time / 1024 if elapsed_time > 0 else 0
 
-                        if not api_key and not speed_checked and elapsed_time > 5:
-                            speed_checked = True
-                            if speed < 1030:
-                                print(
-                                    "\n      ❌ Низкая скорость скачивания (< 1030 KB/s)."
-                                )
-                                return "low_speed"
+                    if not api_key and not speed_checked and elapsed_time > 5:
+                        speed_checked = True
+                        if speed < PIXELDRAIN_MIN_SPEED_NO_API:
+                            print(f"\n      ❌ Низкая скорость скачивания (< {PIXELDRAIN_MIN_SPEED_NO_API} KB/s).")
+                            return "low_speed"
 
-                        progress = downloaded_size / total_size * 100
-                        sys.stdout.write(
-                            f"\r      [pixeldrain] {progress:.1f}% of {total_size / 1024 / 1024:.2f}MB at {speed:.1f} KB/s"
-                        )
-                        sys.stdout.flush()
-            print("\n      ✅ Скачивание успешно завершено.")
-            return "success"
+                    progress = downloaded_size / total_size * 100
+                    sys.stdout.write(
+                        f"\r      [pixeldrain] {progress:.1f}% of {total_size / 1024 / 1024:.2f}MB at {speed:.1f} KB/s"
+                    )
+                    sys.stdout.flush()
+        print("\n      ✅ Скачивание успешно завершено.")
+        return "success"
 
     except requests.exceptions.RequestException as e:
         print(f"\n      ❌ Ошибка при скачивании: {e}")
@@ -96,7 +96,7 @@ def perform_download_attempt(file_id, api_key=None):
         raise
 
 
-def main():
+def main() -> None:
     """Main function to run the downloader script."""
     config_data = load_config() or {}
     settings = config_data.get("settings", {})

@@ -1,5 +1,6 @@
 import sys
 import time
+
 from src.app import run_check
 
 if sys.platform == "win32":
@@ -8,16 +9,14 @@ else:
     import select
 
 
-def main():
+def main() -> None:
     """The main entry point of the script."""
     try:
         print("🚀 Мониторинг запущен. Нажмите Ctrl+C для выхода.")
         print("ℹ️ Нажмите Enter, чтобы запустить проверку немедленно.")
         while True:
             interval_minutes = run_check()
-            print(
-                f"\n---\n🕒 Проверка завершена. Следующая проверка через {interval_minutes} минут."
-            )
+            print(f"\n---\n🕒 Проверка завершена. Следующая проверка через {interval_minutes} минут.")
 
             ready = False
             if sys.platform == "win32":

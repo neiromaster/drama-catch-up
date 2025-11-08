@@ -1,0 +1,36 @@
+{
+    "$schema": "https://raw.githubusercontent.com/microsoft/pyright/main/packages/vscode-pyright/schemas/pyrightconfig.schema.json",
+    "stubPath": "src/reposter/typings",
+    "typeCheckingMode": "strict",
+    "pythonVersion": "3.12",
+    "pythonPlatform": "All",
+    "reportMissingImports": true,
+    "reportMissingTypeStubs": true,
+    "reportUnusedImport": true,
+    "reportUnusedVariable": true,
+    "useLibraryCodeForTypes": true,
+    "reportOptionalMemberAccess": true,
+    "reportOptionalSubscript": true,
+    "reportOptionalCall": true,
+    "reportOptionalIterable": true,
+    "reportUnnecessaryTypeIgnoreComment": true,
+    "reportUnnecessaryCast": true,
+    "reportUnnecessaryComparison": true,
+    "reportUnnecessaryContains": true,
+    "reportUnnecessaryIsInstance": true,
+    "exclude": [
+        "**/__pycache__",
+        "**/.venv",
+        "**/venv",
+        "build",
+        "dist",
+        ".pytest_cache",
+        ".mypy_cache"
+    ],
+    "include": [
+        "src",
+        "tests"
+    ],
+    "venvPath": ".",
+    "venv": ".venv"
+}
