@@ -2,10 +2,12 @@ import requests
 
 from src.providers.base import BaseProvider
 from src.providers.filecrypt import FileCryptProvider
+from src.providers.viewcrate import ViewCrateProvider
 
 # A registry of all available providers
 PROVIDER_REGISTRY: dict[str, type[BaseProvider]] = {
     "filecrypt": FileCryptProvider,
+    "viewcrate": ViewCrateProvider,
 }
 
 
