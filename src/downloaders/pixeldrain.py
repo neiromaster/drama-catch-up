@@ -37,20 +37,20 @@ class PixeldrainDownloader(BaseDownloader):
         download_url = PIXELDRAIN_API_FILE_URL.format(file_id=file_id)
 
         # --- Phase 1: Download without API Key ---
-        log(f"--- [pixeldrain] Этап 1: Скачивание серии {episode} без ключа ---", indent=3)
+        log(f"🔽 --- [pixeldrain] Этап 1: Скачивание серии {episode} без ключа ---", indent=3)
         for attempt in range(retries):
-            log(f"Попытка {attempt + 1}/{retries}...", indent=3)
+            log(f"🔄 Попытка {attempt + 1}/{retries}...", indent=3)
             status = self._perform_download(download_url, series_name, season, episode, output_dir, headers={})
 
             if status == "success":
                 return True
 
             if status == "low_speed":
-                log("Низкая скорость. Переход к скачиванию с ключом.", indent=3)
+                log("🐌 Низкая скорость. Переход к скачиванию с ключом.", indent=3)
                 break
 
             if attempt < retries - 1:
-                log(f"Ошибка. Повтор через {retry_delay} секунд...", indent=3)
+                log(f"❌ Ошибка. Повтор через {retry_delay} секунд...", indent=3)
                 time.sleep(retry_delay)
 
         # --- Phase 2: Download with API Key ---
@@ -62,11 +62,11 @@ class PixeldrainDownloader(BaseDownloader):
             )
             return False
 
-        log(f"--- [pixeldrain] Этап 2: Скачивание серии {episode} с ключом ---", indent=3, top=1)
+        log(f"🔽 --- [pixeldrain] Этап 2: Скачивание серии {episode} с ключом ---", indent=3, top=1)
         auth_str = f":{api_key}"
         headers = {"Authorization": "Basic " + base64.b64encode(auth_str.encode()).decode()}
         for attempt in range(retries):
-            log(f"Попытка {attempt + 1}/{retries}...", indent=3)
+            log(f"🔄 Попытка {attempt + 1}/{retries}...", indent=3)
             status = self._perform_download(
                 download_url,
                 series_name,
@@ -80,7 +80,7 @@ class PixeldrainDownloader(BaseDownloader):
                 return True
 
             if attempt < retries - 1:
-                log(f"Ошибка. Повтор через {retry_delay} секунд...", indent=3)
+                log(f"❌ Ошибка. Повтор через {retry_delay} секунд...", indent=3)
                 time.sleep(retry_delay)
 
         log(f"❌ [pixeldrain] Не удалось скачать серию {episode} после всех попыток.", indent=3, top=1)
@@ -176,7 +176,7 @@ class PixeldrainDownloader(BaseDownloader):
                 try:
                     error_data = e.response.json()
                     if error_data.get("value") == "file_rate_limited_captcha_required":
-                        log("❌ Файл требует капчу для скачивания без ключа.", indent=3)
+                        log("🚫 Файл требует капчу для скачивания без ключа.", indent=3)
                 except Exception:
                     pass
             return "failed"
