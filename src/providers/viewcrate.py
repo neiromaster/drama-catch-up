@@ -11,6 +11,12 @@ from src.utils import get_with_retries
 class ViewCrateProvider(BaseProvider):
     """Provider for viewcrate.cc links."""
 
+    @classmethod
+    def can_handle_url(cls, url: str) -> bool:
+        """Check if the provider can handle the given URL."""
+
+        return "viewcrate.cc" in url
+
     def get_series_episodes(self, series_info: dict[str, Any]) -> tuple[int, list[dict[str, Any]]]:
         """Finds links to new episodes for a series from a viewcrate.cc page."""
         response = get_with_retries(self.session, series_info["url"])

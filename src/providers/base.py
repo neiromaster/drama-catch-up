@@ -10,6 +10,20 @@ class BaseProvider(ABC):
     def __init__(self, session: requests.Session):
         self.session = session
 
+    @classmethod
+    @abstractmethod
+    def can_handle_url(cls, url: str) -> bool:
+        """
+        Check if the provider can handle the given URL.
+
+        Args:
+            url: The URL to check.
+
+        Returns:
+            True if the provider can handle the URL, False otherwise.
+        """
+        pass
+
     @abstractmethod
     def get_series_episodes(self, series_info: dict[str, Any]) -> tuple[int, list[dict[str, Any]]]:
         """

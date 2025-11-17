@@ -86,13 +86,8 @@ def _process_single_series(
         _handle_cookies(session, cookie_settings)
 
         try:
-            provider_name = series.get("provider")
-            if not provider_name:
-                print(f"  ❌ 'provider' не указан для сериала: {series['name']}")
-                return
-
-            print(f"  🔍 Используется провайдер: {provider_name}")
-            provider = get_provider(provider_name, session)
+            print(f"  🔍 Автоматическое определение провайдера для URL: {series['url']}")
+            provider = get_provider(series["url"], session)
 
             print(f"  📄 Загрузка информации о сериях с {series['url']}")
             total_episodes, new_episodes = provider.get_series_episodes(series)
