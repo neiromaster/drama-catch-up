@@ -9,7 +9,7 @@ import requests
 from src.config import load_config, save_config
 from src.constants import DEFAULT_USER_AGENT
 from src.downloader import download_with_pixeldrain, download_with_yt_dlp
-from src.scraper import get_final_download_url, get_with_retries, parse_series_links
+from src.providers import get_provider
 
 
 def run_check() -> int:
@@ -86,14 +86,21 @@ def _process_single_series(
         _handle_cookies(session, cookie_settings)
 
         try:
-            print(f"  📄 Загрузка страницы контейнера: {series['url']}")
-            response = get_with_retries(session, series["url"])
-            html_content = response.text
-        except requests.RequestException as e:
-            print(f"  ❌ Ошибка при загрузке страницы контейнера: {e}")
+            provider_name = series.get("provider")
+            if not provider_name:
+                print(f"  ❌ 'provider' не указан для сериала: {series['name']}")
+                return
+
+            print(f"  🔍 Используется провайдер: {provider_name}")
+            provider = get_provider(provider_name, session)
+
+            print(f"  📄 Загрузка информации о сериях с {series['url']}")
+            total_episodes, new_episodes = provider.get_series_episodes(series)
+
+        except (requests.RequestException, ValueError) as e:
+            print(f"  ❌ Ошибка при получении информации о сериях: {e}")
             return
 
-        total_episodes, new_episodes = parse_series_links(html_content, series)
         if total_episodes == 0:
             print("  ⚠️ На странице не найдено ни одной серии. Возможно, нужно пройти капчу.")
             return
@@ -123,7 +130,7 @@ def _process_single_series(
                         f"    🔗 Серия {episode_data['episode']} ({episode_data['source']}): "
                         f"обработка ссылки {episode_data['link']}"
                     )
-                    final_url = get_final_download_url(session, episode_data["link"])
+                    final_url = provider.get_download_url(episode_data["link"])
                     print(f"      ➡️ Финальная ссылка: {final_url}")
 
                     if episode_data["source"] == "gofile":

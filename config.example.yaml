@@ -36,9 +36,11 @@ settings:
 # List of series to track
 series:
   - name: "Name of the Series"
+    provider: "filecrypt"  # The provider for this series
     url: "https://filecrypt.cc/Container/YOUR_CONTAINER_ID.html"
     series: 0 # The number of the last episode you have downloaded.
   
   - name: "Another Series"
+    provider: "filecrypt"
     url: "https://filecrypt.cc/Container/ANOTHER_ID.html"
     series: 5 # Starts checking for episodes 6 and newer.
