@@ -7,30 +7,33 @@ from typing import Any
 import requests
 
 
-def log(message: str, pad: int = 0, top: int = 0, bottom: int = 0, left_pad_char: str = " ") -> None:
+def log(message: str, indent: int = 0, top: int = 0, bottom: int = 0, carriage_return: bool = False) -> None:
     """
-    Print a message with custom padding and indentation.
+    Custom print function that supports indentation, padding, and optional carriage return.
 
     Args:
-        message: The message to print
-        pad: Number of padding units to add to the left (each unit is 2 spaces)
-        top: Number of empty lines to add before the message
-        bottom: Number of empty lines to add after the message
-        left_pad_char: Character to use for left padding (default is space)
+        message: The message to print.
+        indent: Number of indentation units (2 spaces each).
+        top: Number of empty lines to print before the message.
+        bottom: Number of empty lines to print after the message.
+        carriage_return: If True, prepends '\r' to the message for in-place updates.
     """
-    # Add top padding
-    for _ in range(top):
-        print()
+    if top > 0:
+        print("\n" * (top - 1))
 
-    # Calculate left padding
-    left_padding = left_pad_char * (pad * 2)
+    prefix = "  " * indent
 
-    # Print the message with left padding
-    print(f"{left_padding}{message}")
+    output_message = f"{prefix}{message}"
+    if carriage_return:
+        output_message = f"\r{output_message}"
 
-    # Add bottom padding
-    for _ in range(bottom):
-        print()
+    try:
+        print(output_message)
+    except UnicodeEncodeError:
+        print(output_message.encode("ascii", errors="replace").decode("ascii"))
+
+    if bottom > 0:
+        print("\n" * (bottom - 1))
 
 
 def get_logger(name: str) -> logging.Logger:

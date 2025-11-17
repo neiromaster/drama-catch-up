@@ -10,13 +10,14 @@ from src.config import load_config, save_config
 from src.constants import DEFAULT_USER_AGENT
 from src.downloaders import get_downloader
 from src.providers import get_provider
+from src.utils import log
 
 
 def run_check() -> int:
     """Runs a single check cycle for all series."""
     config_data = load_config()
     if not config_data:
-        print("❌ Файл config.yaml не найден. Пропускаю проверку.")
+        log("❌ Файл config.yaml не найден. Пропускаю проверку.")
         return 10
 
     settings = config_data.get("settings", {})
@@ -29,17 +30,17 @@ def run_check() -> int:
     series_list = config_data.get("series", [])
 
     if not series_list:
-        print("⚠️ В конфиге не найдено ни одного сериала для отслеживания.")
+        log("⚠️ В конфиге не найдено ни одного сериала для отслеживания.")
         return settings.get("check_interval_minutes", 10)
 
-    print("\n---")
+    log("---", top=1)
     for i, series in enumerate(series_list):
         if i > 0:
             delay = random.randint(10, 25)
-            print(f"⏸️ --- Пауза {delay} секунд перед следующим сериалом ---")
+            log(f"--- Пауза {delay} секунд перед следующим сериалом ---", indent=1)
             time.sleep(delay)
 
-        print(f"\n🎬 --- Работа с сериалом: {series['name']} ---")
+        log(f"--- Работа с сериалом: {series['name']} ---", top=1)
         _process_single_series(
             series,
             config_data,
@@ -60,12 +61,12 @@ def _handle_cookies(session: requests.Session, cookie_settings: dict[str, Any]) 
     if cookie_settings.get("enable", False):
         try:
             browser = cookie_settings.get("browser", "firefox")
-            print(f"  🍪 Загрузка cookies из {browser}...")
+            log(f"🍪 Загрузка cookies из {browser}...", indent=1)
             cj = getattr(browser_cookie3, browser)(domain_name="filecrypt.cc")
             session.cookies.update(cj)
-            print("  ✅ Cookies успешно загружены.")
+            log("✅ Cookies успешно загружены.", indent=1)
         except Exception as e:
-            print(f"  ❌ Не удалось загрузить cookies: {e}")
+            log(f"❌ Не удалось загрузить cookies: {e}", indent=1)
 
 
 def _process_single_series(
@@ -86,28 +87,29 @@ def _process_single_series(
         _handle_cookies(session, cookie_settings)
 
         try:
-            print(f"  🔍 Автоматическое определение провайдера для URL: {series['url']}")
+            log(f"🔍 Автоматическое определение провайдера для URL: {series['url']}", indent=1)
             provider = get_provider(series["url"], session)
 
-            print(f"  📄 Загрузка информации о сериях с {series['url']}")
+            log(f"📄 Загрузка информации о сериях с {series['url']}", indent=1)
             total_episodes, new_episodes = provider.get_series_episodes(series)
 
         except (requests.RequestException, ValueError) as e:
-            print(f"  ❌ Ошибка при получении информации о сериях: {e}")
+            log(f"❌ Ошибка при получении информации о сериях: {e}", indent=1)
             return
 
         if total_episodes == 0:
-            print("  ⚠️ На странице не найдено ни одной серии. Возможно, нужно пройти капчу.")
+            log("⚠️ На странице не найдено ни одной серии. Возможно, нужно пройти капчу.", indent=1)
             return
 
         if not new_episodes:
-            print("  ✅ Новых серий не найдено.")
+            log("✅ Новых серий не найдено.", indent=1)
             return
 
         download_delay = random.randint(5, 15)
-        print(
-            f"  ✨ Найдено {len(new_episodes)} уникальных ссылок на новые серии."
-            f" Пауза {download_delay} секунд перед началом обработки..."
+        log(
+            f"✨ Найдено {len(new_episodes)} уникальных ссылок на новые серии."
+            f" Пауза {download_delay} секунд перед началом обработки...",
+            indent=1,
         )
         time.sleep(download_delay)
 
@@ -121,12 +123,13 @@ def _process_single_series(
 
             for episode_data in sorted_links:
                 try:
-                    print(
-                        f"    🔗 Серия {episode_data['episode']} ({episode_data['source']}): "
-                        f"обработка ссылки {episode_data['link']}"
+                    log(
+                        f"🔗 Серия {episode_data['episode']} ({episode_data['source']}): "
+                        f"обработка ссылки {episode_data['link']}",
+                        indent=2,
                     )
                     final_url = provider.get_download_url(episode_data["link"])
-                    print(f"      ➡️ Финальная ссылка: {final_url}")
+                    log(f"➡️ Финальная ссылка: {final_url}", indent=3)
 
                     downloader = get_downloader(episode_data["source"])
                     download_successful = downloader.download(
@@ -144,7 +147,7 @@ def _process_single_series(
                     if download_successful:
                         current_config = load_config()
                         if current_config is None:
-                            print("  ❌ Не удалось загрузить конфиг для обновления.")
+                            log("❌ Не удалось загрузить конфиг для обновления.", indent=1)
                             continue
                         original_series_index = next(
                             (idx for idx, s in enumerate(current_config["series"]) if s["name"] == series["name"]),
@@ -153,15 +156,16 @@ def _process_single_series(
                         if original_series_index is not None:
                             current_config["series"][original_series_index]["series"] = episode_data["episode"]
                             save_config(current_config)
-                            print(f"      💾 Обновлен конфиг: последняя серия {episode_data['episode']}.")
+                            log(f"💾 Обновлен конфиг: последняя серия {episode_data['episode']}.", indent=3)
                         break  # Move to the next episode
                     else:
-                        print(f"      ⚠️ Не удалось скачать с {episode_data['source']}. Пробую следующий источник...")
+                        log(f"⚠️ Не удалось скачать с {episode_data['source']}. Пробую следующий источник...", indent=3)
 
                 except Exception as e:
-                    print(
-                        f"    ❌ Ошибка при обработке серии {episode_data['episode']} "
-                        f"с источника {episode_data['source']}: {e}"
+                    log(
+                        f"❌ Ошибка при обработке серии {episode_data['episode']} "
+                        f"с источника {episode_data['source']}: {e}",
+                        indent=2,
                     )
             if not download_successful:
-                print(f"  ❌ Не удалось скачать серию {episode_num} со всех источников.")
+                log(f"❌ Не удалось скачать серию {episode_num} со всех источников.", indent=1)

@@ -7,6 +7,7 @@ import time
 from typing import Any
 
 from src.downloaders.base import BaseDownloader
+from src.utils import log
 
 
 class YtDlpDownloader(BaseDownloader):
@@ -27,7 +28,10 @@ class YtDlpDownloader(BaseDownloader):
         retry_delay = kwargs.get("retry_delay", 5)
 
         for attempt in range(retries):
-            print(f"      🔽 [yt-dlp] Попытка скачивания серии {episode} (попытка {attempt + 1}/{retries})...")
+            log(
+                f"🔽 [yt-dlp] Попытка скачивания серии {episode} (попытка {attempt + 1}/{retries})...",
+                indent=3,
+            )
 
             with tempfile.TemporaryDirectory() as temp_dir:
                 output_template = os.path.join(temp_dir, f"{series_name} - S{season:02d}E{episode:02d}.%(ext)s")
@@ -50,11 +54,15 @@ class YtDlpDownloader(BaseDownloader):
 
                     subprocess.run(command, check=True)
 
-                    print("\n      ⌛ [yt-dlp] Перемещение файла...")
+                    log("⌛ [yt-dlp] Перемещение файла...", indent=3, top=1)
 
                     downloaded_files = glob.glob(os.path.join(temp_dir, "*"))
                     if not downloaded_files:
-                        print(f"\n      ❌ [yt-dlp] Ошибка: скачанный файл не найден в {temp_dir}..")
+                        log(
+                            f"❌ [yt-dlp] Ошибка: скачанный файл не найден в {temp_dir}.",
+                            indent=3,
+                            top=1,
+                        )
                         continue
 
                     downloaded_file = downloaded_files[0]
@@ -65,17 +73,25 @@ class YtDlpDownloader(BaseDownloader):
                     final_path = os.path.join(series_folder, os.path.basename(downloaded_file))
                     shutil.move(downloaded_file, final_path)
 
-                    print(f"\n      ✅ [yt-dlp] Скачивание и перемещение серии {episode} успешно завершено.")
+                    log(
+                        f"✅ [yt-dlp] Скачивание и перемещение серии {episode} успешно завершено.",
+                        indent=3,
+                        top=1,
+                    )
                     return True
                 except subprocess.CalledProcessError:
-                    print(f"\n      ❌ [yt-dlp] Ошибка при скачивании серии {episode}.")
+                    log(f"❌ [yt-dlp] Ошибка при скачивании серии {episode}.", indent=2, top=1)
                     if attempt < retries - 1:
-                        print(f"      ▩ Повторная попытка через {retry_delay} секунд...")
+                        log(f"▩ Повторная попытка через {retry_delay} секунд...", indent=3)
                         time.sleep(retry_delay)
                     continue
                 except KeyboardInterrupt:
-                    print("\n      🛑 Скачивание прервано пользователем.")
+                    log("🛑 Скачивание прервано пользователем.", indent=3, top=1)
                     return False
 
-        print(f"\n      ❌ [yt-dlp] Не удалось скачать серию {episode} после {retries} попыток.")
+        log(
+            f"❌ [yt-dlp] Не удалось скачать серию {episode} после {retries} попыток.",
+            indent=3,
+            top=1,
+        )
         return False

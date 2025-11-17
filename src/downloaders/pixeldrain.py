@@ -13,6 +13,7 @@ from src.constants import (
     PIXELDRAIN_MIN_SPEED_WITH_API,
 )
 from src.downloaders.base import BaseDownloader
+from src.utils import log
 
 
 class PixeldrainDownloader(BaseDownloader):
@@ -36,32 +37,36 @@ class PixeldrainDownloader(BaseDownloader):
         download_url = PIXELDRAIN_API_FILE_URL.format(file_id=file_id)
 
         # --- Phase 1: Download without API Key ---
-        print(f"      --- [pixeldrain] Этап 1: Скачивание серии {episode} без ключа ---")
+        log(f"--- [pixeldrain] Этап 1: Скачивание серии {episode} без ключа ---", indent=3)
         for attempt in range(retries):
-            print(f"      Попытка {attempt + 1}/{retries}...")
+            log(f"Попытка {attempt + 1}/{retries}...", indent=3)
             status = self._perform_download(download_url, series_name, season, episode, output_dir, headers={})
 
             if status == "success":
                 return True
 
             if status == "low_speed":
-                print("      Низкая скорость. Переход к скачиванию с ключом.")
+                log("Низкая скорость. Переход к скачиванию с ключом.", indent=3)
                 break
 
             if attempt < retries - 1:
-                print(f"      Ошибка. Повтор через {retry_delay} секунд...")
+                log(f"Ошибка. Повтор через {retry_delay} секунд...", indent=3)
                 time.sleep(retry_delay)
 
         # --- Phase 2: Download with API Key ---
         if not api_key:
-            print(f"\n      ❌ [pixeldrain] Не удалось скачать серию {episode} без ключа. API ключ не найден.")
+            log(
+                f"❌ [pixeldrain] Не удалось скачать серию {episode} без ключа. API ключ не найден.",
+                indent=3,
+                top=1,
+            )
             return False
 
-        print(f"\n      --- [pixeldrain] Этап 2: Скачивание серии {episode} с ключом ---")
+        log(f"--- [pixeldrain] Этап 2: Скачивание серии {episode} с ключом ---", indent=3, top=1)
         auth_str = f":{api_key}"
         headers = {"Authorization": "Basic " + base64.b64encode(auth_str.encode()).decode()}
         for attempt in range(retries):
-            print(f"      Попытка {attempt + 1}/{retries}...")
+            log(f"Попытка {attempt + 1}/{retries}...", indent=3)
             status = self._perform_download(
                 download_url,
                 series_name,
@@ -75,10 +80,10 @@ class PixeldrainDownloader(BaseDownloader):
                 return True
 
             if attempt < retries - 1:
-                print(f"      Ошибка. Повтор через {retry_delay} секунд...")
+                log(f"Ошибка. Повтор через {retry_delay} секунд...", indent=3)
                 time.sleep(retry_delay)
 
-        print(f"\n      ❌ [pixeldrain] Не удалось скачать серию {episode} после всех попыток.")
+        log(f"❌ [pixeldrain] Не удалось скачать серию {episode} после всех попыток.", indent=3, top=1)
         return False
 
     def _perform_download(
@@ -139,37 +144,44 @@ class PixeldrainDownloader(BaseDownloader):
                                     PIXELDRAIN_MIN_SPEED_NO_API if not headers else PIXELDRAIN_MIN_SPEED_WITH_API
                                 )
                                 if speed < min_speed:
-                                    print(f"\n      ❌ [pixeldrain] Низкая скорость скачивания (< {min_speed} KB/s).")
+                                    log(
+                                        f"❌ [pixeldrain] Низкая скорость скачивания (< {min_speed} KB/s).",
+                                        indent=3,
+                                        top=1,
+                                    )
                                     return "low_speed"
-
                             progress = downloaded_size / total_size * 100
-                            print(
-                                f"\r      [pixeldrain] {progress:.1f}% of {total_size / 1024 / 1024:.2f}MB "
-                                f"at {speed:.1f} KB/s",
-                                end="",
+                            log(
+                                f"[pixeldrain] {progress:.1f}% of {total_size / 1024 / 1024:.2f}MB at {speed:.1f} KB/s",
+                                indent=3,
+                                carriage_return=True,
                             )
-                    print()
+                    log("")
 
-            print("\n      ⌛ [pixeldrain] Перемещение файла...")
+            log("⌛ [pixeldrain] Перемещение файла...", indent=3, top=1)
             series_folder = os.path.join(output_dir, series_name)
             os.makedirs(series_folder, exist_ok=True)
             final_path = os.path.join(series_folder, filename)
             shutil.move(temp_path, final_path)
-            print(f"\n      ✅ [pixeldrain] Скачивание и перемещение серии {episode} успешно завершено.")
+            log(
+                f"✅ [pixeldrain] Скачивание и перемещение серии {episode} успешно завершено.",
+                indent=3,
+                top=1,
+            )
             return "success"
 
         except requests.exceptions.RequestException as e:
-            print(f"\n      ❌ [pixeldrain] Ошибка при скачивании серии {episode}: {e}")
+            log(f"❌ [pixeldrain] Ошибка при скачивании серии {episode}: {e}", indent=3, top=1)
             if e.response and e.response.status_code == 403:
                 try:
                     error_data = e.response.json()
                     if error_data.get("value") == "file_rate_limited_captcha_required":
-                        print("      ❌ Файл требует капчу для скачивания без ключа.")
+                        log("❌ Файл требует капчу для скачивания без ключа.", indent=3)
                 except Exception:
                     pass
             return "failed"
         except KeyboardInterrupt:
-            print("\n      🛑 Скачивание прервано пользователем.")
+            log("🛑 Скачивание прервано пользователем.", indent=3, top=1)
             raise
         finally:
             if temp_path and os.path.exists(temp_path):
