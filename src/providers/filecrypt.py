@@ -1,7 +1,7 @@
 import re
-from typing import Any
+from typing import Any, cast
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 from src.constants import FILECRYPT_LINK_URL_TEMPLATE
 from src.providers.base import BaseProvider
@@ -27,10 +27,12 @@ class FileCryptProvider(BaseProvider):
         last_downloaded = series_info.get("series", 0)
 
         for row in soup.find_all("tr", class_="kwj3"):
+            row = cast(Tag, row)
             source: str | None = None
 
             gofile_links = row.find_all("a", class_="external_link")
             for link in gofile_links:
+                link = cast(Tag, link)
                 link_text = link.get_text()
                 if link_text and "gofile.io" in link_text.lower():
                     source = "gofile"
@@ -39,6 +41,7 @@ class FileCryptProvider(BaseProvider):
             if not source:
                 pixeldrain_links = row.find_all("a", class_="external_link")
                 for link in pixeldrain_links:
+                    link = cast(Tag, link)
                     link_text = link.get_text()
                     if link_text and "pixeldrain.com" in link_text.lower():
                         source = "pixeldrain"
@@ -47,7 +50,7 @@ class FileCryptProvider(BaseProvider):
             if not source:
                 continue
 
-            title_cell = row.find("td", attrs={"title": True})
+            title_cell = cast(Tag, row.find("td", attrs={"title": True}))
             if not title_cell:
                 continue
 
@@ -62,13 +65,13 @@ class FileCryptProvider(BaseProvider):
             if episode_num <= last_downloaded:
                 continue
 
-            download_button = row.find("button", class_=("download", "downloaded"))
+            download_button = cast(Tag, row.find("button", class_=("download", "downloaded")))
             if download_button:
                 data_attribute = next(
                     (attr for attr in download_button.attrs if attr.startswith("data-")),
                     None,
                 )
-                if data_attribute:
+                if data_attribute is not None:
                     link_id = download_button.get(data_attribute)
                     filecrypt_link = FILECRYPT_LINK_URL_TEMPLATE.format(link_id=link_id)
                     found_links.append(

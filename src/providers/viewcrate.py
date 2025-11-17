@@ -1,8 +1,8 @@
 import re
-from typing import Any
+from typing import Any, cast
 from urllib.parse import urljoin
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 from src.providers.base import BaseProvider
 from src.utils import get_with_retries
@@ -27,17 +27,26 @@ class ViewCrateProvider(BaseProvider):
         last_downloaded = series_info.get("series", 0)
 
         for episode_group in soup.find_all("div", class_="episode-group"):
-            episode_match = re.search(r"[Ss](\d+)[Ee](\d+)", episode_group.get("data-episode", ""))
+            episode_group = cast(Tag, episode_group)
+            episode_match: re.Match[str] | None = re.search(
+                r"[Ss](\d+)[Ee](\d+)",
+                str(episode_group.get("data-episode", "")),
+            )
             if not episode_match:
                 continue
+            assert episode_match is not None
 
             total_episodes_in_container += 1
-            season_num, episode_num = int(episode_match.group(1)), int(episode_match.group(2))
+            season_num, episode_num = (
+                int(episode_match.group(1)),
+                int(episode_match.group(2)),
+            )
 
             if episode_num <= last_downloaded:
                 continue
 
             for link_item in episode_group.find_all("div", class_="link-item"):
+                link_item = cast(Tag, link_item)
                 host = link_item.get("data-host")
                 if host not in ["gofile.io", "pixeldrain.com"]:
                     continue
@@ -47,11 +56,11 @@ class ViewCrateProvider(BaseProvider):
                 filename_tag = link_item.find("span", class_="text-gray-100")
                 filename = filename_tag.text.strip() if filename_tag else ""
 
-                link_tag = link_item.find("a", href=True)
+                link_tag = cast(Tag, link_item.find("a", href=True))
                 if not link_tag:
                     continue
 
-                relative_link = link_tag["href"]
+                relative_link = str(link_tag["href"])
                 absolute_link = urljoin(series_info["url"], relative_link)
 
                 found_links.append(
