@@ -26,14 +26,18 @@ def log(message: str, indent: int = 0, top: int = 0, bottom: int = 0, carriage_r
     output_message = f"{prefix}{message}"
     if carriage_return:
         output_message = f"\r{output_message}"
-        print_kwargs = {"end": ""}
-    else:
-        print_kwargs = {}
 
     try:
-        print(output_message, **print_kwargs)
+        if carriage_return:
+            print(output_message, end="")
+        else:
+            print(output_message)
     except UnicodeEncodeError:
-        print(output_message.encode("ascii", errors="replace").decode("ascii"), **print_kwargs)
+        # Fallback to ASCII representation if Unicode fails
+        if carriage_return:
+            print(output_message.encode("ascii", errors="replace").decode("ascii"), end="")
+        else:
+            print(output_message.encode("ascii", errors="replace").decode("ascii"))
 
     if bottom > 0:
         print("\n" * (bottom - 1))

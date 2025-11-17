@@ -3,7 +3,7 @@ import random
 import time
 from typing import Any
 
-import browser_cookie3
+import browser_cookie3  # type: ignore
 import requests
 
 from src.config import load_config, save_config
@@ -63,7 +63,7 @@ def _handle_cookies(session: requests.Session, cookie_settings: dict[str, Any]) 
             browser = cookie_settings.get("browser", "firefox")
             log(f"🍪 Загрузка cookies из {browser}...", indent=1)
             cj = getattr(browser_cookie3, browser)(domain_name="filecrypt.cc")
-            session.cookies.update(cj)
+            session.cookies.update(cj)  # type: ignore
             log("✅ Cookies успешно загружены.", indent=1)
         except Exception as e:
             log(f"❌ Не удалось загрузить cookies: {e}", indent=1)
