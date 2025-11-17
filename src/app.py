@@ -8,7 +8,7 @@ import requests
 
 from src.config import load_config, save_config
 from src.constants import DEFAULT_USER_AGENT
-from src.downloader import download_with_pixeldrain, download_with_yt_dlp
+from src.downloaders import get_downloader
 from src.providers import get_provider
 
 
@@ -133,48 +133,18 @@ def _process_single_series(
                     final_url = provider.get_download_url(episode_data["link"])
                     print(f"      ➡️ Финальная ссылка: {final_url}")
 
-                    if episode_data["source"] == "gofile":
-                        # Ensure type safety for download_with_yt_dlp call
-                        url: str = final_url
-                        series_name: str = series["name"]
-                        season: int = episode_data["season"]
-                        episode: int = episode_data["episode"]
-                        output_dir: str = download_dir
-                        yt_dlp_args_local: list[str] = yt_dlp_args
-                        retries: int = download_retries
-                        retry_delay: int = download_retry_delay
-
-                        download_successful = download_with_yt_dlp(
-                            url=url,
-                            series_name=series_name,
-                            season=season,
-                            episode=episode,
-                            output_dir=output_dir,
-                            yt_dlp_args=yt_dlp_args_local,
-                            retries=retries,
-                            retry_delay=retry_delay,
-                        )
-                    elif episode_data["source"] == "pixeldrain":
-                        # Ensure type safety for download_with_pixeldrain call
-                        url: str = final_url
-                        series_name: str = series["name"]
-                        season: int = episode_data["season"]
-                        episode: int = episode_data["episode"]
-                        output_dir: str = download_dir
-                        retries: int = download_retries
-                        retry_delay: int = download_retry_delay
-                        api_key: str = pixeldrain_api_key
-
-                        download_successful = download_with_pixeldrain(
-                            url=url,
-                            series_name=series_name,
-                            season=season,
-                            episode=episode,
-                            output_dir=output_dir,
-                            retries=retries,
-                            retry_delay=retry_delay,
-                            api_key=api_key,
-                        )
+                    downloader = get_downloader(episode_data["source"])
+                    download_successful = downloader.download(
+                        url=final_url,
+                        series_name=series["name"],
+                        season=episode_data["season"],
+                        episode=episode_data["episode"],
+                        output_dir=download_dir,
+                        yt_dlp_args=yt_dlp_args,
+                        retries=download_retries,
+                        retry_delay=download_retry_delay,
+                        api_key=pixeldrain_api_key,
+                    )
 
                     if download_successful:
                         current_config = load_config()
