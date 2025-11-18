@@ -116,11 +116,17 @@ jobs:
     - name: Build pixeldrain-downloader with PyInstaller
       run: uv run pyinstaller pixeldrain_downloader.py --onefile --name pixeldrain-${{ matrix.os }}-${{ matrix.arch }}
 
-    - name: Upload Artifacts
+    - name: Upload drama-catch-up Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: executables-${{ matrix.os }}-${{ matrix.arch }}
-        path: dist/*
+        name: drama-catch-up-${{ matrix.os }}-${{ matrix.arch }}
+        path: dist/drama-catch-up-${{ matrix.os }}-${{ matrix.arch }}*
+
+    - name: Upload pixeldrain-downloader Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: pixeldrain-${{ matrix.os }}-${{ matrix.arch }}
+        path: dist/pixeldrain-${{ matrix.os }}-${{ matrix.arch }}*
   
   release:
     name: Create GitHub Release
@@ -139,4 +145,4 @@ jobs:
       - name: Create Release and Upload Assets
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/*/*/*
+          files: artifacts/*/*
