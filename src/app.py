@@ -144,6 +144,6 @@ def _process_single_series(series: Series, settings: dict[str, Any]) -> None:
                         current_config["series"][series_index]["season"] = season_num
                     current_config["series"][series_index]["episode"] = episode_num
                     save_config(current_config)
-                    log(f"💾 Обновлен конфиг: Сезон {season_num}, Серия {episode_num}.")
+                    log(f"💾 Обновлен конфиг: Сезон {season_num}, Серия {episode_num}.", indent=2, bottom=1)
             else:
                 log(f"❌ Не удалось скачать серию {episode_num} со всех источников.", indent=1)
