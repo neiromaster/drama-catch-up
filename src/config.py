@@ -15,4 +15,4 @@ def load_config(path: str = "config.yaml") -> dict[str, Any] | None:
 def save_config(data: dict[str, Any], path: str = "config.yaml") -> None:
     """Saves the data to a YAML file."""
     with open(path, "w", encoding="utf-8") as f:
-        yaml.dump(data, f, allow_unicode=True)
+        yaml.dump(data, f, allow_unicode=True, sort_keys=False)

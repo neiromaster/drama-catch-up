@@ -1,3 +1,5 @@
+from typing import TypedDict
+
 """Constants used throughout the application."""
 
 # Default user agent for HTTP requests
@@ -7,8 +9,8 @@ DEFAULT_USER_AGENT = (
 )
 
 # Minimum download speed thresholds (in KB/s)
-PIXELDRAIN_MIN_SPEED_NO_API = 1030
-PIXELDRAIN_MIN_SPEED_WITH_API = 1100
+PIXELDRAIN_MIN_SPEED_NO_API = 1100
+PIXELDRAIN_MIN_SPEED_WITH_API = 1000000
 
 # Default configuration values
 DEFAULT_CHECK_INTERVAL_MINUTES = 10
@@ -27,3 +29,19 @@ PIXELDRAIN_API_FILE_URL = f"{PIXELDRAIN_BASE_URL}/api/file/{{file_id}}"
 
 # yt-dlp default arguments
 YT_DLP_DEFAULT_ARGS = ["--concurrent-fragments", "4"]
+
+
+class Episode(TypedDict):
+    """Represents a single episode with its details."""
+
+    season: int
+    episode: int
+    source: str
+    link: str
+
+
+class Series(TypedDict):
+    name: str
+    url: str
+    season: int
+    episode: int

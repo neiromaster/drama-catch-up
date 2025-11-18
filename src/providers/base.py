@@ -3,6 +3,8 @@ from typing import Any
 
 import requests
 
+from src.constants import Series
+
 
 class BaseProvider(ABC):
     """Abstract base class for a series provider."""
@@ -25,7 +27,7 @@ class BaseProvider(ABC):
         pass
 
     @abstractmethod
-    def get_series_episodes(self, series_info: dict[str, Any]) -> tuple[int, list[dict[str, Any]]]:
+    def get_series_episodes(self, series_info: Series) -> tuple[int, list[dict[str, Any]]]:
         """
         Get the list of episodes for a series.
 

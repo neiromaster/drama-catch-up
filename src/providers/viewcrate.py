@@ -4,6 +4,7 @@ from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup, Tag
 
+from src.constants import Series
 from src.providers.base import BaseProvider
 from src.utils import get_with_retries
 
@@ -17,14 +18,15 @@ class ViewCrateProvider(BaseProvider):
 
         return "viewcrate.cc" in url
 
-    def get_series_episodes(self, series_info: dict[str, Any]) -> tuple[int, list[dict[str, Any]]]:
+    def get_series_episodes(self, series_info: Series) -> tuple[int, list[dict[str, Any]]]:
         """Finds links to new episodes for a series from a viewcrate.cc page."""
         response = get_with_retries(self.session, series_info["url"])
         html_content = response.text
         soup = BeautifulSoup(html_content, "html.parser")
         found_links: list[dict[str, Any]] = []
         total_episodes_in_container = 0
-        last_downloaded = series_info.get("series", 0)
+        last_season = series_info.get("season", 0)
+        last_episode = series_info.get("episode", 0)
 
         for episode_group in soup.find_all("div", class_="episode-group"):
             episode_group = cast(Tag, episode_group)
@@ -42,7 +44,7 @@ class ViewCrateProvider(BaseProvider):
                 int(episode_match.group(2)),
             )
 
-            if episode_num <= last_downloaded:
+            if season_num < last_season or (season_num == last_season and episode_num <= last_episode):
                 continue
 
             for link_item in episode_group.find_all("div", class_="link-item"):

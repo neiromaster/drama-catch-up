@@ -3,7 +3,7 @@ from typing import Any, cast
 
 from bs4 import BeautifulSoup, Tag
 
-from src.constants import FILECRYPT_LINK_URL_TEMPLATE
+from src.constants import FILECRYPT_LINK_URL_TEMPLATE, Series
 from src.providers.base import BaseProvider
 from src.utils import get_with_retries
 
@@ -17,14 +17,15 @@ class FileCryptProvider(BaseProvider):
 
         return "filecrypt.cc" in url
 
-    def get_series_episodes(self, series_info: dict[str, Any]) -> tuple[int, list[dict[str, Any]]]:
+    def get_series_episodes(self, series_info: Series) -> tuple[int, list[dict[str, Any]]]:
         """Finds links to new episodes for a series from a filecrypt.cc page."""
         response = get_with_retries(self.session, series_info["url"])
         html_content = response.text
         soup = BeautifulSoup(html_content, "html.parser")
         found_links: list[dict[str, Any]] = []
         total_episodes_in_container = 0
-        last_downloaded = series_info.get("series", 0)
+        last_season = series_info.get("season", 0)
+        last_episode = series_info.get("episode", 0)
 
         for row in soup.find_all("tr", class_="kwj3"):
             row = cast(Tag, row)
@@ -62,7 +63,7 @@ class FileCryptProvider(BaseProvider):
             total_episodes_in_container += 1
 
             season_num, episode_num = int(match.group(1)), int(match.group(2))
-            if episode_num <= last_downloaded:
+            if season_num < last_season or (season_num == last_season and episode_num <= last_episode):
                 continue
 
             download_button = cast(Tag, row.find("button", class_=("download", "downloaded")))
