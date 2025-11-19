@@ -27,3 +27,6 @@ PIXELDRAIN_API_FILE_URL = f"{PIXELDRAIN_BASE_URL}/api/file/{{file_id}}"
 
 # yt-dlp default arguments
 YT_DLP_DEFAULT_ARGS = ["--concurrent-fragments", "4"]
+
+# Constants for source priority in download
+SOURCE_PRIORITY = {"gofile": 0, "pixeldrain": 1}

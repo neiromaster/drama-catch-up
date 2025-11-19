@@ -9,7 +9,7 @@ import browser_cookie3  # type: ignore
 import requests
 
 from src.config import load_config, save_config
-from src.constants import DEFAULT_USER_AGENT
+from src.constants import DEFAULT_USER_AGENT, SOURCE_PRIORITY
 from src.downloaders import get_downloader
 from src.providers import get_provider
 from src.providers.types import Episode
@@ -96,13 +96,15 @@ def _process_single_series(
     with requests.Session() as session:
         session.headers.update({"User-Agent": DEFAULT_USER_AGENT})
 
-        _handle_cookies(session, cookie_settings, series["url"])
+        series_url = series["url"]
+
+        _handle_cookies(session, cookie_settings, series_url)
 
         try:
-            log(f"🔍 Автоматическое определение провайдера для URL: {series['url']}", indent=1)
-            provider = get_provider(series["url"], session)
+            log(f"🔍 Автоматическое определение провайдера для URL: {series_url}", indent=1)
+            provider = get_provider(series_url, session)
 
-            log(f"📄 Загрузка информации о сериях с {series['url']}", indent=1)
+            log(f"📄 Загрузка информации о сериях с {series_url}", indent=1)
             total_episodes, new_episodes = provider.get_series_episodes(series)
             new_episodes: Sequence[Episode] = new_episodes
 
@@ -131,8 +133,8 @@ def _process_single_series(
 
         for episode_num, links in episodes_to_download.items():
             download_successful = False
-            # Sort links to prioritize gofile
-            sorted_links = sorted(links, key=lambda x: x.source != "gofile")
+            # Sort links to prioritize gofile, then pixeldrain
+            sorted_links = sorted(links, key=lambda x: SOURCE_PRIORITY.get(x.source, 2))
 
             for episode_data in sorted_links:
                 try:
