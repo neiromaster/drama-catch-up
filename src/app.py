@@ -105,16 +105,18 @@ def _process_single_series(
             provider = get_provider(series_url, session)
 
             log(f"📄 Загрузка информации о сериях с {series_url}", indent=1)
-            total_episodes, new_episodes = provider.get_series_episodes(series)
-            new_episodes: Sequence[Episode] = new_episodes
+            all_episodes: Sequence[Episode] = provider.get_series_episodes(series_url)
 
         except (requests.RequestException, ValueError) as e:
             log(f"❌ Ошибка при получении информации о сериях: {e}", indent=1)
             return
 
-        if total_episodes == 0:
+        if not all_episodes:
             log("⚠️ На странице не найдено ни одной серии. Возможно, нужно пройти капчу.", indent=1)
             return
+
+        last_downloaded = series.get("series", 0)
+        new_episodes = [e for e in all_episodes if e.episode > last_downloaded]
 
         if not new_episodes:
             log("✅ Новых серий не найдено.", indent=1)

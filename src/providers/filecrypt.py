@@ -1,5 +1,5 @@
 import re
-from typing import Any, cast
+from typing import cast
 
 from bs4 import BeautifulSoup, Tag
 
@@ -19,14 +19,12 @@ class FileCryptProvider(BaseProvider):
 
         return "filecrypt.cc" in url
 
-    def get_series_episodes(self, series_info: dict[str, Any]) -> tuple[int, list[Episode]]:
-        """Finds links to new episodes for a series from a filecrypt.cc page."""
-        response = get_with_retries(self.session, series_info["url"])
+    def get_series_episodes(self, url: str) -> list[Episode]:
+        """Finds links to all episodes for a series from a filecrypt.cc page."""
+        response = get_with_retries(self.session, url)
         html_content = response.text
         soup = BeautifulSoup(html_content, "html.parser")
-        found_links: list[Episode] = []
-        total_episodes_in_container = 0
-        last_downloaded = series_info.get("series", 0)
+        all_episodes: list[Episode] = []
 
         for row in soup.find_all("tr", class_="kwj3"):
             row = cast(Tag, row)
@@ -55,11 +53,7 @@ class FileCryptProvider(BaseProvider):
             if not match:
                 continue
 
-            total_episodes_in_container += 1
-
             season_num, episode_num = int(match.group(1)), int(match.group(2))
-            if episode_num <= last_downloaded:
-                continue
 
             download_button = cast(Tag, row.find("button", class_=("download", "downloaded")))
             if download_button:
@@ -70,7 +64,7 @@ class FileCryptProvider(BaseProvider):
                 if data_attribute is not None:
                     link_id = download_button.get(data_attribute)
                     filecrypt_link = FILECRYPT_LINK_URL_TEMPLATE.format(link_id=link_id)
-                    found_links.append(
+                    all_episodes.append(
                         Episode(
                             season=season_num,
                             episode=episode_num,
@@ -79,7 +73,7 @@ class FileCryptProvider(BaseProvider):
                             source=source,
                         )
                     )
-        return total_episodes_in_container, sorted(found_links, key=lambda x: x.episode)
+        return sorted(all_episodes, key=lambda x: x.episode)
 
     def get_download_url(self, episode_link: str) -> str:
         """Resolves the intermediate redirect to get the final download URL."""

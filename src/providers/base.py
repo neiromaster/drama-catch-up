@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import Any
 
 import requests
 
@@ -28,20 +27,17 @@ class BaseProvider(ABC):
         pass
 
     @abstractmethod
-    def get_series_episodes(self, series_info: dict[str, Any]) -> tuple[int, Sequence[Episode]]:
+    def get_series_episodes(self, url: str) -> Sequence[Episode]:
         """
-        Get the list of episodes for a series.
+        Get the list of all episodes for a series.
 
         Args:
-            series_info: A dictionary containing information about the series,
-                         including the URL.
+            url: The URL of the series page to fetch episodes from.
 
         Returns:
-            A tuple containing:
-            - The total number of episodes found.
-            - A list of dictionaries, where each dictionary represents a new
-              episode and contains details like season, episode number, and
-              download link.
+            A list of dictionaries, where each dictionary represents an
+            episode and contains details like season, episode number, and
+            download link.
         """
         pass
 
