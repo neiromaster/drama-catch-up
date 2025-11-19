@@ -81,6 +81,24 @@ def _handle_cookies(
             log(f"❌ Не удалось загрузить cookies: {e}", indent=1)
 
 
+def _process_episodes(
+    episodes: Sequence[Episode],
+    last_downloaded: int,
+) -> dict[int, list[Episode]]:
+    """Filters for new episodes, groups them, and sorts by source priority."""
+    new_episodes = [e for e in episodes if e.episode > last_downloaded]
+
+    if not new_episodes:
+        return {}
+
+    episodes_by_num = {k: list(g) for k, g in itertools.groupby(new_episodes, key=lambda x: x.episode)}
+
+    for num, links in episodes_by_num.items():
+        episodes_by_num[num] = sorted(links, key=lambda x: SOURCE_PRIORITY.get(x.source, 999))
+
+    return episodes_by_num
+
+
 def _process_single_series(
     series: dict[str, Any],
     config_data: dict[str, Any],
@@ -112,33 +130,30 @@ def _process_single_series(
             return
 
         if not all_episodes:
-            log("⚠️ На странице не найдено ни одной серии. Возможно, нужно пройти капчу.", indent=1)
+            log(
+                "⚠️ На странице не найдено ни одной серии с поддерживаемым источником.",
+                indent=1,
+            )
             return
 
         last_downloaded = series.get("series", 0)
-        new_episodes = [e for e in all_episodes if e.episode > last_downloaded]
+        episodes_to_download = _process_episodes(all_episodes, last_downloaded)
 
-        if not new_episodes:
+        if not episodes_to_download:
             log("✅ Новых серий не найдено.", indent=1)
             return
 
         download_delay = random.randint(5, 15)
         log(
-            f"✨ Найдено {len(new_episodes)} уникальных ссылок на новые серии."
+            f"✨ Найдено {len(episodes_to_download)} новых серий для скачивания."
             f" Пауза {download_delay} секунд перед началом обработки...",
             indent=1,
         )
         time.sleep(download_delay)
 
-        # Group episodes by episode number
-        episodes_to_download = {k: list(g) for k, g in itertools.groupby(new_episodes, key=lambda x: x.episode)}
-
         for episode_num, links in episodes_to_download.items():
             download_successful = False
-            # Sort links to prioritize gofile, then pixeldrain
-            sorted_links = sorted(links, key=lambda x: SOURCE_PRIORITY.get(x.source, 2))
-
-            for episode_data in sorted_links:
+            for episode_data in links:
                 try:
                     log(
                         f"🔗 Серия {episode_data.episode} ({episode_data.source}): "
@@ -173,10 +188,16 @@ def _process_single_series(
                         if original_series_index is not None:
                             current_config["series"][original_series_index]["series"] = episode_data.episode
                             save_config(current_config)
-                            log(f"💾 Обновлен конфиг: последняя серия {episode_data.episode}.", indent=3)
+                            log(
+                                f"💾 Обновлен конфиг: последняя серия {episode_data.episode}.",
+                                indent=3,
+                            )
                         break  # Move to the next episode
                     else:
-                        log(f"⚠️ Не удалось скачать с {episode_data.source}. Пробую следующий источник...", indent=3)
+                        log(
+                            f"⚠️ Не удалось скачать с {episode_data.source}. Пробую следующий источник...",
+                            indent=3,
+                        )
 
                 except Exception as e:
                     log(
