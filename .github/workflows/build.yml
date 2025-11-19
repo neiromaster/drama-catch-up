@@ -1,13 +1,15 @@
-name: Build Executables
+name: Build and Release
 
 on:
   push:
     branches: [ "main" ]
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 jobs:
   lint:
-    name: Lint code
+    name: Lint and type-check
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -16,7 +18,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.13'
 
       - name: Install uv
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -32,17 +34,60 @@ jobs:
 
       - name: Check formatting
         run: uv run ruff format --check .
+      
+      - name: Run type checking
+        run: uv run pyright
+
+  test:
+    name: Run tests
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+        shell: bash
+
+      - name: Add uv to PATH
+        run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+        shell: bash
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+        shell: bash
+
+      - name: Run tests
+        run: uv run pytest
+        env:
+          PYTHONPATH: .
 
   build:
     defaults:
       run:
         shell: bash
-    needs: lint
-    name: Build for ${{ matrix.os }}
+    needs: test
+    name: Build for ${{ matrix.os }} (${{ matrix.arch }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-14] # macos-14 is Apple Silicon (arm64)
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+          - os: ubuntu-latest
+            arch: aarch64
+          - os: windows-latest
+            arch: x86_64
+          - os: macos-latest
+            arch: x86_64
+          - os: macos-latest
+            arch: aarch64
 
     steps:
     - name: Checkout code
@@ -51,7 +96,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
+        python-version: '3.13'
 
     - name: Install uv
       run: curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -65,11 +110,39 @@ jobs:
       run: uv sync --all-extras
       shell: bash
 
-    - name: Build with PyInstaller
-      run: uv run pyinstaller main.py --onefile --name drama-catch-up-${{ matrix.os }}
+    - name: Build drama-catch-up with PyInstaller
+      run: uv run pyinstaller main.py --onefile --name drama-catch-up-${{ matrix.os }}-${{ matrix.arch }}
 
-    - name: Upload Artifact
+    - name: Build pixeldrain-downloader with PyInstaller
+      run: uv run pyinstaller pixeldrain_downloader.py --onefile --name pixeldrain-${{ matrix.os }}-${{ matrix.arch }}
+
+    - name: Upload drama-catch-up Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: drama-catch-up-${{ matrix.os }}
-        path: dist/*
+        name: drama-catch-up-${{ matrix.os }}-${{ matrix.arch }}
+        path: dist/drama-catch-up-${{ matrix.os }}-${{ matrix.arch }}*
+
+    - name: Upload pixeldrain-downloader Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: pixeldrain-${{ matrix.os }}-${{ matrix.arch }}
+        path: dist/pixeldrain-${{ matrix.os }}-${{ matrix.arch }}*
+  
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+      
+      - name: Create Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*/*
