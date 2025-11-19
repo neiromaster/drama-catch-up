@@ -4,7 +4,9 @@ from typing import Any, cast
 from bs4 import BeautifulSoup, Tag
 
 from src.constants import FILECRYPT_LINK_URL_TEMPLATE
+from src.downloaders import DOWNLOADER_REGISTRY
 from src.providers.base import BaseProvider
+from src.providers.types import Episode
 from src.utils import get_with_retries
 
 
@@ -17,12 +19,12 @@ class FileCryptProvider(BaseProvider):
 
         return "filecrypt.cc" in url
 
-    def get_series_episodes(self, series_info: dict[str, Any]) -> tuple[int, list[dict[str, Any]]]:
+    def get_series_episodes(self, series_info: dict[str, Any]) -> tuple[int, list[Episode]]:
         """Finds links to new episodes for a series from a filecrypt.cc page."""
         response = get_with_retries(self.session, series_info["url"])
         html_content = response.text
         soup = BeautifulSoup(html_content, "html.parser")
-        found_links: list[dict[str, Any]] = []
+        found_links: list[Episode] = []
         total_episodes_in_container = 0
         last_downloaded = series_info.get("series", 0)
 
@@ -30,22 +32,16 @@ class FileCryptProvider(BaseProvider):
             row = cast(Tag, row)
             source: str | None = None
 
-            gofile_links = row.find_all("a", class_="external_link")
-            for link in gofile_links:
+            links = row.find_all("a", class_="external_link")
+            for link in links:
                 link = cast(Tag, link)
-                link_text = link.get_text()
-                if link_text and "gofile.io" in link_text.lower():
-                    source = "gofile"
-                    break
-
-            if not source:
-                pixeldrain_links = row.find_all("a", class_="external_link")
-                for link in pixeldrain_links:
-                    link = cast(Tag, link)
-                    link_text = link.get_text()
-                    if link_text and "pixeldrain.com" in link_text.lower():
-                        source = "pixeldrain"
+                link_text = link.get_text().lower()
+                for downloader_name in DOWNLOADER_REGISTRY:
+                    if downloader_name in link_text:
+                        source = downloader_name
                         break
+                if source:
+                    break
 
             if not source:
                 continue
@@ -75,15 +71,15 @@ class FileCryptProvider(BaseProvider):
                     link_id = download_button.get(data_attribute)
                     filecrypt_link = FILECRYPT_LINK_URL_TEMPLATE.format(link_id=link_id)
                     found_links.append(
-                        {
-                            "season": season_num,
-                            "episode": episode_num,
-                            "link": filecrypt_link,
-                            "filename": filename,
-                            "source": source,
-                        }
+                        Episode(
+                            season=season_num,
+                            episode=episode_num,
+                            link=filecrypt_link,
+                            filename=filename,
+                            source=source,
+                        )
                     )
-        return total_episodes_in_container, sorted(found_links, key=lambda x: x["episode"])
+        return total_episodes_in_container, sorted(found_links, key=lambda x: x.episode)
 
     def get_download_url(self, episode_link: str) -> str:
         """Resolves the intermediate redirect to get the final download URL."""

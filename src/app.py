@@ -1,7 +1,9 @@
 import itertools
 import random
 import time
+from collections.abc import Sequence
 from typing import Any
+from urllib.parse import urlparse
 
 import browser_cookie3  # type: ignore
 import requests
@@ -10,6 +12,7 @@ from src.config import load_config, save_config
 from src.constants import DEFAULT_USER_AGENT
 from src.downloaders import get_downloader
 from src.providers import get_provider
+from src.providers.types import Episode
 from src.utils import log
 
 
@@ -56,13 +59,22 @@ def run_check() -> int:
     return settings.get("check_interval_minutes", 10)
 
 
-def _handle_cookies(session: requests.Session, cookie_settings: dict[str, Any]) -> None:
+def _handle_cookies(
+    session: requests.Session,
+    cookie_settings: dict[str, Any],
+    series_url: str,
+) -> None:
     """Handles loading cookies into the requests session."""
     if cookie_settings.get("enable", False):
         try:
+            domain = urlparse(series_url).netloc
+            if not domain:
+                log("⚠️ Не удалось извлечь домен из URL серии. Пропускаю загрузку cookies.", indent=1)
+                return
+
             browser = cookie_settings.get("browser", "firefox")
-            log(f"🍪 Загрузка cookies из {browser}...", indent=1)
-            cj = getattr(browser_cookie3, browser)(domain_name="filecrypt.cc")
+            log(f"🍪 Загрузка cookies для домена '{domain}' из {browser}...", indent=1)
+            cj = getattr(browser_cookie3, browser)(domain_name=domain)
             session.cookies.update(cj)  # type: ignore
             log("✅ Cookies успешно загружены.", indent=1)
         except Exception as e:
@@ -84,7 +96,7 @@ def _process_single_series(
     with requests.Session() as session:
         session.headers.update({"User-Agent": DEFAULT_USER_AGENT})
 
-        _handle_cookies(session, cookie_settings)
+        _handle_cookies(session, cookie_settings, series["url"])
 
         try:
             log(f"🔍 Автоматическое определение провайдера для URL: {series['url']}", indent=1)
@@ -92,6 +104,7 @@ def _process_single_series(
 
             log(f"📄 Загрузка информации о сериях с {series['url']}", indent=1)
             total_episodes, new_episodes = provider.get_series_episodes(series)
+            new_episodes: Sequence[Episode] = new_episodes
 
         except (requests.RequestException, ValueError) as e:
             log(f"❌ Ошибка при получении информации о сериях: {e}", indent=1)
@@ -114,29 +127,29 @@ def _process_single_series(
         time.sleep(download_delay)
 
         # Group episodes by episode number
-        episodes_to_download = {k: list(g) for k, g in itertools.groupby(new_episodes, key=lambda x: x["episode"])}
+        episodes_to_download = {k: list(g) for k, g in itertools.groupby(new_episodes, key=lambda x: x.episode)}
 
         for episode_num, links in episodes_to_download.items():
             download_successful = False
             # Sort links to prioritize gofile
-            sorted_links = sorted(links, key=lambda x: x["source"] != "gofile")
+            sorted_links = sorted(links, key=lambda x: x.source != "gofile")
 
             for episode_data in sorted_links:
                 try:
                     log(
-                        f"🔗 Серия {episode_data['episode']} ({episode_data['source']}): "
-                        f"обработка ссылки {episode_data['link']}",
+                        f"🔗 Серия {episode_data.episode} ({episode_data.source}): "
+                        f"обработка ссылки {episode_data.link}",
                         indent=2,
                     )
-                    final_url = provider.get_download_url(episode_data["link"])
+                    final_url = provider.get_download_url(episode_data.link)
                     log(f"➡️ Финальная ссылка: {final_url}", indent=3)
 
-                    downloader = get_downloader(episode_data["source"])
+                    downloader = get_downloader(episode_data.source)
                     download_successful = downloader.download(
                         url=final_url,
                         series_name=series["name"],
-                        season=episode_data["season"],
-                        episode=episode_data["episode"],
+                        season=episode_data.season,
+                        episode=episode_data.episode,
                         output_dir=download_dir,
                         yt_dlp_args=yt_dlp_args,
                         retries=download_retries,
@@ -154,17 +167,16 @@ def _process_single_series(
                             None,
                         )
                         if original_series_index is not None:
-                            current_config["series"][original_series_index]["series"] = episode_data["episode"]
+                            current_config["series"][original_series_index]["series"] = episode_data.episode
                             save_config(current_config)
-                            log(f"💾 Обновлен конфиг: последняя серия {episode_data['episode']}.", indent=3)
+                            log(f"💾 Обновлен конфиг: последняя серия {episode_data.episode}.", indent=3)
                         break  # Move to the next episode
                     else:
-                        log(f"⚠️ Не удалось скачать с {episode_data['source']}. Пробую следующий источник...", indent=3)
+                        log(f"⚠️ Не удалось скачать с {episode_data.source}. Пробую следующий источник...", indent=3)
 
                 except Exception as e:
                     log(
-                        f"❌ Ошибка при обработке серии {episode_data['episode']} "
-                        f"с источника {episode_data['source']}: {e}",
+                        f"❌ Ошибка при обработке серии {episode_data.episode} с источника {episode_data.source}: {e}",
                         indent=2,
                     )
             if not download_successful:

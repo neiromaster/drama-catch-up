@@ -1,7 +1,10 @@
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from typing import Any
 
 import requests
+
+from src.providers.types import Episode
 
 
 class BaseProvider(ABC):
@@ -25,7 +28,7 @@ class BaseProvider(ABC):
         pass
 
     @abstractmethod
-    def get_series_episodes(self, series_info: dict[str, Any]) -> tuple[int, list[dict[str, Any]]]:
+    def get_series_episodes(self, series_info: dict[str, Any]) -> tuple[int, Sequence[Episode]]:
         """
         Get the list of episodes for a series.
 

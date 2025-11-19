@@ -5,7 +5,9 @@ from src.downloaders.yt_dlp import YtDlpDownloader
 # A registry of all available downloaders
 DOWNLOADER_REGISTRY: dict[str, type[BaseDownloader]] = {
     "pixeldrain": PixeldrainDownloader,
-    "gofile": YtDlpDownloader,  # yt-dlp is used for gofile links
+    "pixeldrain.com": PixeldrainDownloader,
+    "gofile": YtDlpDownloader,
+    "gofile.io": YtDlpDownloader,
 }
 
 
