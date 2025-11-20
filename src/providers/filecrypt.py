@@ -7,7 +7,6 @@ from src.constants import FILECRYPT_LINK_URL_TEMPLATE
 from src.downloaders import DOWNLOADER_REGISTRY
 from src.providers.base import BaseProvider
 from src.providers.types import Episode
-from src.utils import get_with_retries
 
 
 class FileCryptProvider(BaseProvider):
@@ -21,8 +20,8 @@ class FileCryptProvider(BaseProvider):
 
     def get_series_episodes(self, url: str) -> list[Episode]:
         """Finds links to all episodes for a series from a filecrypt.cc page."""
-        response = get_with_retries(self.session, url)
-        html_content = response.text
+        self.page.goto(url)
+        html_content = self.page.content()
         soup = BeautifulSoup(html_content, "html.parser")
         all_episodes: list[Episode] = []
 
@@ -77,13 +76,5 @@ class FileCryptProvider(BaseProvider):
 
     def get_download_url(self, episode_link: str) -> str:
         """Resolves the intermediate redirect to get the final download URL."""
-        link_page_response = get_with_retries(self.session, episode_link)
-
-        js_match = re.search(r"top\.location\.href='(.*?)'", link_page_response.text)
-        if not js_match:
-            raise ValueError("Could not find intermediate JS redirect link.")
-
-        intermediate_url = js_match.group(1)
-        final_response = get_with_retries(self.session, intermediate_url, allow_redirects=True)
-
-        return final_response.url
+        self.page.goto(episode_link)
+        return self.page.url

@@ -110,6 +110,12 @@ jobs:
       run: uv sync --all-extras
       shell: bash
 
+    - name: Install Playwright browsers
+      run: uv run playwright install chromium
+      shell: bash
+      env:
+        PLAYWRIGHT_BROWSERS_PATH: 0
+
     - name: Build drama-catch-up with PyInstaller
       run: uv run pyinstaller main.py --onefile --name drama-catch-up-${{ matrix.os }}-${{ matrix.arch }}
 

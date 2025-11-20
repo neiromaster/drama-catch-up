@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 
-import requests
+from playwright.sync_api import Page
 
 from src.providers.types import Episode
 
@@ -9,8 +9,8 @@ from src.providers.types import Episode
 class BaseProvider(ABC):
     """Abstract base class for a series provider."""
 
-    def __init__(self, session: requests.Session):
-        self.session = session
+    def __init__(self, page: Page):
+        self.page = page
 
     @classmethod
     @abstractmethod

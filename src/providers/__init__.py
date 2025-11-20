@@ -1,4 +1,4 @@
-import requests
+from playwright.sync_api import Page
 
 from src.providers.base import BaseProvider
 from src.providers.filecrypt import FileCryptProvider
@@ -11,13 +11,13 @@ PROVIDER_REGISTRY: list[type[BaseProvider]] = [
 ]
 
 
-def get_provider(url: str, session: requests.Session) -> BaseProvider:
+def get_provider(url: str, page: Page) -> BaseProvider:
     """
     Factory function to get a provider instance based on the URL.
 
     Args:
         url: The URL of the series.
-        session: The requests.Session to use for the provider.
+        page: The Playwright Page to use for the provider.
 
     Returns:
         An instance of the appropriate provider.
@@ -27,5 +27,5 @@ def get_provider(url: str, session: requests.Session) -> BaseProvider:
     """
     for provider_class in PROVIDER_REGISTRY:
         if provider_class.can_handle_url(url):
-            return provider_class(session)
+            return provider_class(page)
     raise ValueError(f"No suitable provider found for URL: {url}")
