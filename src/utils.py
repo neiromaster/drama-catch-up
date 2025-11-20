@@ -42,4 +42,3 @@ def log(message: str, indent: int = 0, top: int = 0, bottom: int = 0, carriage_r
 def get_logger(name: str) -> logging.Logger:
     """Get a logger with the specified name."""
     return logging.getLogger(name)
-
