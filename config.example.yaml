@@ -33,6 +33,9 @@ settings:
   # API key for pixeldrain.com
   pixeldrain_api_key: ""
 
+  # Path to the browser executable. If null, playwright will use its default browsers.
+  browser_executable_path: null
+
 # List of series to track
 series:
   - name: "Name of the Series"

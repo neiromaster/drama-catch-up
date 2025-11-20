@@ -30,6 +30,7 @@ def run_check() -> int:
     download_retry_delay = settings.get("download_retry_delay", 5)
     cookie_settings = settings.get("cookies", {"enable": False})
     pixeldrain_api_key = settings.get("pixeldrain_api_key")
+    browser_executable_path = settings.get("browser_executable_path")
     series_list = config_data.get("series", [])
 
     if not series_list:
@@ -37,7 +38,7 @@ def run_check() -> int:
         return settings.get("check_interval_minutes", 10)
 
     with sync_playwright() as p:
-        browser = p.chromium.launch()
+        browser = p.chromium.launch(executable_path=browser_executable_path)
         log("---", top=1)
         for i, series in enumerate(series_list):
             if i > 0:
