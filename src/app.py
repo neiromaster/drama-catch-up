@@ -7,9 +7,10 @@ from urllib.parse import urlparse
 
 import browser_cookie3  # type: ignore
 from playwright.sync_api import Browser, sync_playwright
+from playwright_stealth import Stealth  # type: ignore[reportMissingTypeStubs]
 
 from src.config import load_config, save_config
-from src.constants import DEFAULT_USER_AGENT, SOURCE_PRIORITY
+from src.constants import SOURCE_PRIORITY
 from src.downloaders import get_downloader
 from src.providers import get_provider
 from src.providers.types import Episode
@@ -38,7 +39,10 @@ def run_check() -> int:
         return settings.get("check_interval_minutes", 10)
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(executable_path=browser_executable_path)
+        if browser_executable_path:
+            browser = p.chromium.launch(executable_path=browser_executable_path)
+        else:
+            browser = p.chromium.launch(channel="chrome")
         log("---", top=1)
         for i, series in enumerate(series_list):
             if i > 0:
@@ -95,7 +99,15 @@ def _process_single_series(
     browser: Browser,
 ) -> None:
     """Processes a single series, checking for new episodes and initiating downloads."""
-    context = browser.new_context(user_agent=DEFAULT_USER_AGENT)
+    context = browser.new_context(
+        user_agent=(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/125.0.0.0 Safari/537.36"
+        ),
+        viewport={"width": 1920, "height": 1080},
+    )
+    stealth = Stealth()
+    stealth.apply_stealth_sync(context)
 
     series_url = series["url"]
 

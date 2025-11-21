@@ -25,7 +25,8 @@
         "build",
         "dist",
         ".pytest_cache",
-        ".mypy_cache"
+        ".mypy_cache",
+        "**/.venv/Lib/site-packages/playwright_stealth"
     ],
     "include": [
         "src",
