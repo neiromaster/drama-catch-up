@@ -87,7 +87,7 @@ class YtDlpDownloader(BaseDownloader):
                     continue
                 except KeyboardInterrupt:
                     log("🛑 Скачивание прервано пользователем.", indent=3, top=1)
-                    return False
+                    raise
 
         log(
             f"❌ [yt-dlp] Не удалось скачать серию {episode} после {retries} попыток.",
