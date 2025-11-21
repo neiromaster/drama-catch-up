@@ -110,8 +110,20 @@ jobs:
       run: uv sync --all-extras
       shell: bash
 
+    - name: Set build variables
+      id: set_vars
+      run: |
+        if [[ "${{ runner.os }}" == "Windows" ]]; then
+          echo "SEPARATOR=;" >> $GITHUB_ENV
+        else
+          echo "SEPARATOR=:" >> $GITHUB_ENV
+        fi
+        STEALTH_PATH=$(uv run python -c "import os, playwright_stealth; print(os.path.join(os.path.dirname(playwright_stealth.__file__), 'js'))")
+        echo "STEALTH_PATH=$STEALTH_PATH" >> $GITHUB_ENV
+      shell: bash
+
     - name: Build drama-catch-up with PyInstaller
-      run: uv run pyinstaller main.py --onefile --name drama-catch-up-${{ matrix.os }}-${{ matrix.arch }}
+      run: uv run pyinstaller main.py --onefile --name drama-catch-up-${{ matrix.os }}-${{ matrix.arch }} --add-data "${{ env.STEALTH_PATH }}${{ env.SEPARATOR }}playwright_stealth/js"
 
     - name: Build pixeldrain-downloader with PyInstaller
       run: uv run pyinstaller pixeldrain_downloader.py --onefile --name pixeldrain-${{ matrix.os }}-${{ matrix.arch }}
