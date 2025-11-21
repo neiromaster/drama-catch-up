@@ -10,6 +10,7 @@ dependencies = [
     "beautifulsoup4",
     "browser-cookie3",
     "playwright>=1.56.0",
+    "playwright-stealth",
 ]
 
 [tool.ruff]
