@@ -29,11 +29,21 @@ class ViewCrateProvider(BaseProvider):
 
         all_episodes: list[Episode] = []
 
-        episode_containers = soup.find_all("div", attrs={"data-e": True})
+        episode_containers = soup.select("#x_r > div")
 
         for container in episode_containers:
             container = cast(Tag, container)
-            episode_code = container["data-e"]
+            episode_code = None
+            for attr in container.attrs:
+                if attr.startswith("data-") and re.search(
+                    r"[Ss](\d+)[Ee](\d+)", str(container.attrs[attr])
+                ):
+                    episode_code = str(container.attrs[attr])
+                    break
+
+            if not episode_code:
+                continue
+
             episode_match: re.Match[str] | None = re.search(r"[Ss](\d+)[Ee](\d+)", str(episode_code))
 
             if not episode_match:
@@ -44,12 +54,20 @@ class ViewCrateProvider(BaseProvider):
                 int(episode_match.group(2)),
             )
 
-            link_containers = container.find_all("div", attrs={"data-h": True})
+            links_parent = container.find("div", class_="bg-gray-800")
+            if not links_parent:
+                continue
+
+            link_containers = links_parent.find_all("div", recursive=False)
             for link_container in link_containers:
                 link_container = cast(Tag, link_container)
-                host = str(link_container["data-h"])
+                host = None
+                for attr, value in link_container.attrs.items():
+                    if attr.startswith("data-") and value in DOWNLOADER_REGISTRY:
+                        host = value
+                        break
 
-                if host not in DOWNLOADER_REGISTRY:
+                if not host:
                     continue
 
                 filename_tag = link_container.find("span")
@@ -57,10 +75,15 @@ class ViewCrateProvider(BaseProvider):
                     continue
                 filename = filename_tag.get_text(strip=True)
 
-                link_tag = cast(Tag, link_container.find("a"))
-                if not link_tag or not link_tag.has_attr("href"):
+                link_div = link_container.find("div", onclick=True)
+                if not link_div:
                     continue
-                link = link_tag["href"]
+
+                onclick_attr = link_div["onclick"]
+                link_match = re.search(r"location.href='(.*?)'", str(onclick_attr))
+                if not link_match:
+                    continue
+                link = link_match.group(1)
 
                 all_episodes.append(
                     Episode(
