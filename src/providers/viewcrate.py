@@ -1,5 +1,4 @@
 import re
-from typing import cast
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup, Tag
@@ -32,12 +31,9 @@ class ViewCrateProvider(BaseProvider):
         episode_containers = soup.select("#x_r > div")
 
         for container in episode_containers:
-            container = cast(Tag, container)
             episode_code = None
             for attr in container.attrs:
-                if attr.startswith("data-") and re.search(
-                    r"[Ss](\d+)[Ee](\d+)", str(container.attrs[attr])
-                ):
+                if attr.startswith("data-") and re.search(r"[Ss](\d+)[Ee](\d+)", str(container.attrs[attr])):
                     episode_code = str(container.attrs[attr])
                     break
 
@@ -55,28 +51,30 @@ class ViewCrateProvider(BaseProvider):
             )
 
             links_parent = container.find("div", class_="bg-gray-800")
-            if not links_parent:
+            if not isinstance(links_parent, Tag):
                 continue
 
             link_containers = links_parent.find_all("div", recursive=False)
             for link_container in link_containers:
-                link_container = cast(Tag, link_container)
+                if not isinstance(link_container, Tag):
+                    continue
+
                 host = None
                 for attr, value in link_container.attrs.items():
                     if attr.startswith("data-") and value in DOWNLOADER_REGISTRY:
-                        host = value
+                        host = str(value)
                         break
 
                 if not host:
                     continue
 
                 filename_tag = link_container.find("span")
-                if not filename_tag:
+                if not isinstance(filename_tag, Tag):
                     continue
                 filename = filename_tag.get_text(strip=True)
 
                 link_div = link_container.find("div", onclick=True)
-                if not link_div:
+                if not isinstance(link_div, Tag):
                     continue
 
                 onclick_attr = link_div["onclick"]
