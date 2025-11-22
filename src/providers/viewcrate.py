@@ -1,5 +1,4 @@
 import re
-from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup, Tag
 
@@ -21,7 +20,8 @@ class ViewCrateProvider(BaseProvider):
         """Finds links to all episodes for a series from a viewcrate.cc page."""
 
         self.page.goto(url)
-        self.page.wait_for_load_state("domcontentloaded")
+        # Give the page time to run its JavaScript
+        self.page.wait_for_timeout(10000)
 
         html_content = self.page.content()
         soup = BeautifulSoup(html_content, "html.parser")
@@ -73,21 +73,24 @@ class ViewCrateProvider(BaseProvider):
                     continue
                 filename = filename_tag.get_text(strip=True)
 
-                link_div = link_container.find("div", onclick=True)
+                link_div = link_container.find("div", {"role": "button", "data-z": True})
                 if not isinstance(link_div, Tag):
                     continue
 
-                onclick_attr = link_div["onclick"]
-                link_match = re.search(r"location.href='(.*?)'", str(onclick_attr))
-                if not link_match:
+                # The link is now the data-z attribute
+                link_data_z = link_div.get("data-z")
+                if not link_data_z:
                     continue
-                link = link_match.group(1)
+
+                # If data-z is a list, take the first element
+                if isinstance(link_data_z, list):
+                    link_data_z = link_data_z[0]
 
                 all_episodes.append(
                     Episode(
                         season=season_num,
                         episode=episode_num,
-                        link=urljoin(url, str(link)),
+                        link=str(link_data_z),  # Store the data-z value
                         filename=filename,
                         source=host,
                     )
@@ -96,8 +99,26 @@ class ViewCrateProvider(BaseProvider):
         return sorted(all_episodes, key=lambda x: x.episode)
 
     def get_download_url(self, episode_link: str) -> str:
-        """Resolves the intermediate redirect to get the final download URL."""
-        # For viewcrate, the 'get' link redirects directly to the final host.
-        # We can get the final URL by allowing redirects and inspecting the final URL.
-        self.page.goto(episode_link)
+        """
+        Resolves the intermediate redirect by clicking the button corresponding
+        to the episode_link (which is a data-z value).
+        """
+        # The episode_link is the data-z attribute
+        button_selector = f"div[role='button'][data-z='{episode_link}']"
+
+        button = self.page.locator(button_selector).first
+        if button.count() == 0:
+            raise ValueError(f"Could not find download button with selector: {button_selector}")
+
+        # Remove potential overlays before clicking
+        self.page.evaluate(
+            "() => { document.querySelectorAll('iframe[style*=\"z-index: 2147483647\"]').forEach(e => e.remove()); }"
+        )
+
+        # Force click to bypass any overlays
+        button.click(force=True, timeout=10000)
+
+        # Wait for the new page to load after the click
+        self.page.wait_for_load_state("domcontentloaded")
+
         return self.page.url
