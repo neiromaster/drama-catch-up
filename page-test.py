@@ -1,9 +1,14 @@
 import asyncio
 import sys
-from functools import partial
 
 from playwright.async_api import async_playwright
 from playwright_stealth import Stealth  # type: ignore[reportMissingTypeStubs]
+
+
+def _write_to_file(filename: str, content: str) -> None:
+    """Synchronously writes content to a file."""
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(content)
 
 
 async def main():
@@ -36,7 +41,7 @@ async def main():
 
         print("Saving page content to page-test.html...")
         content = await page.content()
-        await asyncio.to_thread(partial(open, "page-test.html", "w", encoding="utf-8").write, content)
+        await asyncio.to_thread(_write_to_file, "page-test.html", content)
 
         await browser.close()
         print("Done.")
