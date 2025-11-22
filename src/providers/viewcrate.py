@@ -21,7 +21,7 @@ class ViewCrateProvider(BaseProvider):
         """Finds links to all episodes for a series from a viewcrate.cc page."""
 
         self.page.goto(url)
-        self.page.wait_for_load_state("networkidle")
+        self.page.wait_for_load_state("domcontentloaded")
 
         html_content = self.page.content()
         soup = BeautifulSoup(html_content, "html.parser")
